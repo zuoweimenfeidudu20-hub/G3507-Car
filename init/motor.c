@@ -7,7 +7,7 @@ void RightMotor_SetSpeed(uint32_t percent)
 {
     if (percent > 100U) {
         percent = 100U;
-    } 
+    }
 
     uint32_t compare = PWM_PERIOD -
                        ((PWM_PERIOD * percent) / 100U);
