@@ -1,0 +1,10 @@
+{
+  "stm32cube-ide-clangd.enable": false,
+  "C_Cpp.intelliSenseEngine": "default",
+  "editor.multiCursorModifier": "alt",
+  "files.associations": {"*.syscfg": "javascript", "*.h": "c"},
+  "files.exclude": {"**/*.o": true},
+  "search.exclude": {"build": true, "compile_commands.json": true},
+  "C_Cpp.default.compileCommands": "${workspaceFolder}/compile_commands.json",
+  "C_Cpp.errorSquiggles": "enabled"
+}

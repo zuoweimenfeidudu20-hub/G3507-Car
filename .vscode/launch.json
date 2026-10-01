@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    
+    {
+      "name": "MSPM0G3507 - ABrobot Wireless DAP",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/init.out",
+      "request": "launch",
+      "type": "cortex-debug",
+      "servertype": "openocd",
+      "serverpath": "${workspaceFolder}/../mspm0-tools/openocd-new/openocd/bin/openocd.exe",
+      "armToolchainPath": "${workspaceFolder}/../mspm0-tools/arm-none-eabi-gdb/arm-none-eabi-gdb_14.2.rel1",
+      "searchDir": ["${workspaceFolder}/../mspm0-tools/openocd-new/openocd/share/openocd/scripts"],
+      "configFiles": ["${workspaceFolder}/openocd/abrobot-mspm0g3507.cfg"],
+      "preLaunchTask": "MSPM0: Build",
+      "preLaunchCommands": ["set substitute-path bazel-out/k8-opt/bin/source C:/TI/mspm0_sdk_2_11_00_07/source"],
+      "runToEntryPoint": "main",
+      "showDevDebugOutput": "raw"
+    }
+  ]
+}
