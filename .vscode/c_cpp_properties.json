@@ -2,15 +2,24 @@
   "version": 4,
   "configurations": [
     {
-      "name": "MSPM0G3507",
-      "compilerPath": "D:/TI/ccs/tools/compiler/ti-cgt-armllvm_5.1.1.LTS/bin/tiarmclang.exe",
-      "compilerArgs": ["-mcpu=cortex-m0plus", "-mthumb", "-mfloat-abi=soft"],
-      "intelliSenseMode": "windows-clang-arm",
+      "name": "windows-gcc-x64",
+      "compilerPath": "C:\\msys64\\ucrt64\\bin\\gcc.exe",
+      "compilerArgs": [
+        "-mcpu=cortex-m0plus",
+        "-mthumb",
+        "-mfloat-abi=soft"
+      ],
+      "intelliSenseMode": "windows-gcc-x64",
       "compileCommands": "${workspaceFolder}/compile_commands.json",
-      "includePath": ["${workspaceFolder}", "${workspaceFolder}/init", "${workspaceFolder}/build", "C:/TI/mspm0_sdk_2_11_00_07/source", "C:/TI/mspm0_sdk_2_11_00_07/source/third_party/CMSIS/Core/Include"],
-      "defines": ["__MSPM0G3507__", "__USE_SYSCONFIG__"],
-      "cStandard": "c11",
-      "cppStandard": "c++14"
+      "includePath": [
+        "${workspaceFolder}/**"
+      ],
+      "defines": [
+        "__MSPM0G3507__",
+        "__USE_SYSCONFIG__"
+      ],
+      "cStandard": "${default}",
+      "cppStandard": "${default}"
     }
   ]
 }
