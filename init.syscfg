@@ -15,8 +15,6 @@ const GPIO2  = GPIO.addInstance();
 const GPIO3  = GPIO.addInstance();
 const GPIO4  = GPIO.addInstance();
 const GPIO5  = GPIO.addInstance();
-const SPI    = scripting.addModule("/ti/driverlib/SPI", {}, false);
-const SPI1   = SPI.addInstance();
 const PWM    = scripting.addModule("/ti/driverlib/PWM", {}, false);
 const PWM1   = PWM.addInstance();
 const PWM2   = PWM.addInstance();
@@ -193,32 +191,62 @@ PWM2.ccp1PinConfig.onlyInternalResistor = scripting.forceWrite(false);
 PWM2.ccp1PinConfig.passedPeripheralType = scripting.forceWrite("Digital");
 PWM2.ccp1PinConfig.$name                = "ti_driverlib_gpio_GPIOPinGeneric3";
 
-const GPIO6 = GPIO.addInstance();
-GPIO6.$name = "OLED_CTRL";
-GPIO6.associatedPins.create(2);
-GPIO6.associatedPins[0].$name = "DC";
-GPIO6.associatedPins[0].direction = "OUTPUT";
-GPIO6.associatedPins[0].assignedPort = "PORTB";
-GPIO6.associatedPins[0].assignedPin = "26";
-GPIO6.associatedPins[0].pin.$assign = "PB26";
-GPIO6.associatedPins[1].$name = "RES";
-GPIO6.associatedPins[1].direction = "OUTPUT";
-GPIO6.associatedPins[1].assignedPort = "PORTB";
-GPIO6.associatedPins[1].assignedPin = "27";
-GPIO6.associatedPins[1].pin.$assign = "PB27";
+/**
+ * Five flame-sensor analog outputs: ADC0 channels 0..4 -> MEM0..MEM4.
+ * Software-triggered single sequence; MEM4 result marks completion.
+ * VDDA must actually be 3.3 V; the voltage metadata does not set supply voltage.
+ * 40 us acquisition is an initial setting; verify against sensor output impedance.
+ */
+const ADC12 = scripting.addModule("/ti/driverlib/ADC12", {}, false);
+const ADC121 = ADC12.addInstance();
+ADC121.$name = "fire_adc";
+ADC121.peripheral.$assign = "ADC0";
+ADC121.sampClkSrc = "DL_ADC12_CLOCK_ULPCLK";
+ADC121.sampClkDiv = "DL_ADC12_CLOCK_DIVIDE_8";
+ADC121.powerDownMode = "DL_ADC12_POWER_DOWN_MODE_MANUAL";
+ADC121.resolution = "DL_ADC12_SAMP_CONV_RES_12_BIT";
+ADC121.samplingOperationMode = "sequence";
+ADC121.startAdd = 0;
+ADC121.endAdd = 4;
+ADC121.repeatMode = false;
+ADC121.sampleTime0 = "40 us";
+ADC121.enabledInterrupts = ["DL_ADC12_INTERRUPT_MEM4_RESULT_LOADED"];
+ADC121.adcMem0_name = "fire0";
+ADC121.adcMem1_name = "fire1";
+ADC121.adcMem2_name = "fire2";
+ADC121.adcMem3_name = "fire3";
+ADC121.adcMem4_name = "fire4";
+ADC121.adcMem0chansel = "DL_ADC12_INPUT_CHAN_0";
+ADC121.adcMem1chansel = "DL_ADC12_INPUT_CHAN_1";
+ADC121.adcMem2chansel = "DL_ADC12_INPUT_CHAN_2";
+ADC121.adcMem3chansel = "DL_ADC12_INPUT_CHAN_3";
+ADC121.adcMem4chansel = "DL_ADC12_INPUT_CHAN_4";
+ADC121.adcMem0vref = "VDDA";
+ADC121.adcMem1vref = "VDDA";
+ADC121.adcMem2vref = "VDDA";
+ADC121.adcMem3vref = "VDDA";
+ADC121.adcMem4vref = "VDDA";
+ADC121.peripheral.adcPin0.$assign = "PA27";
+ADC121.peripheral.adcPin1.$assign = "PA26";
+ADC121.peripheral.adcPin2.$assign = "PA25";
+ADC121.peripheral.adcPin3.$assign = "PA24";
+ADC121.peripheral.adcPin4.$assign = "PB25";
 
-SPI1.$name = "SPI_OLED";
-SPI1.targetBitRate = 8000000;
-SPI1.chipSelect = ["0"];
-SPI1.peripheral.$assign = "SPI0";
-SPI1.peripheral.sclkPin.$assign = "PA6";
-SPI1.peripheral.mosiPin.$assign = "PA9";
-SPI1.peripheral.misoPin.$assign = "PA4";
-SPI1.peripheral.cs0Pin.$assign = "PB25";
-SPI1.sclkPinConfig.$name = "SPI_OLED_SCLK";
-SPI1.mosiPinConfig.$name = "SPI_OLED_MOSI";
-SPI1.misoPinConfig.$name = "SPI_OLED_MISO";
-SPI1.cs0PinConfig.$name = "SPI_OLED_CS0";
+/**
+ * OLED I2C controller: external SDA/SCL pull-ups to 3.3 V required.
+ * Start at standard-mode 100 kHz; select a faster rate only after checking the panel.
+ */
+const I2C = scripting.addModule("/ti/driverlib/I2C", {}, false);
+const I2C1 = I2C.addInstance();
+I2C1.$name = "I2C_oled";
+I2C1.basicEnableController = true;
+I2C1.basicEnableTarget = false;
+I2C1.basicControllerBusSpeed = 100000;
+I2C1.peripheral.$assign = "I2C0";
+I2C1.peripheral.sdaPin.$assign = "PA28";
+I2C1.peripheral.sclPin.$assign = "PA31";
+I2C1.sdaPinConfig.$name = "I2C_oled_SDA";
+I2C1.sclPinConfig.$name = "I2C_oled_SCL";
 
 SYSCTL.forceDefaultClkConfig = true;
 

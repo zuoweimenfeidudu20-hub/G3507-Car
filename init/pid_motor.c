@@ -1,6 +1,8 @@
 #include "ti_msp_dl_config.h"
 #include "motor.h"
 #include "pid_motor.h"
+#include "stdio.h"
+#include "stdint.h"
 
 typedef struct {
     int32_t integral;
@@ -9,10 +11,10 @@ typedef struct {
 } PIDMotor_Controller;
 
 
-extern volatile int right_encoder_count=0;
-extern volatile int left_encoder_count=0;
-extern volatile int right_error_count = 0;
-extern volatile int left_error_count = 0;
+extern volatile int right_encoder_count;
+extern volatile int left_encoder_count;
+extern volatile int right_error_count;
+extern volatile int left_error_count;
 
  /*索引 = 上次AB * 4 + 本次AB，A为高位、B为低位。 */
 static const int8_t encoder_transition[16] = {
@@ -45,6 +47,18 @@ int32_t Absolute(int32_t value)
     }
 }
 
+int Sign(int32_t value)
+{
+    if(value > 0){
+        return 1;
+    }else if(value <0){
+        return -1;
+    }else{
+        return 0;
+    }
+}
+
+//百分比换算为计数值
 int32_t PercentToCounts(int32_t percent)
 {
     int32_t Encoder_counts;
@@ -62,45 +76,40 @@ int32_t PercentToCounts(int32_t percent)
 }
 
 
-int pid(PIDMotor_Controller *controller,
-                            int32_t target_percent, 
-                            int32_t target_counts, 
-                            int32_t measured_counts)
+int pid_motor(PIDMotor_Controller *controller,
+                            int target_percent, 
+                            int target_counts, 
+                            int measured_counts)
 {
-    int32_t error;
-    int32_t derivative;
-    int32_t correction;
-    int32_t output;
-    int32_t previous_integral;
-
-    if (target_percent == 0) {
-        ResetController(controller);
-        return 0;
-    }/*reset*/
+    int error;
+    int derivative;
+    int correction;
+    int output;
+    int previous_integral;
 
     if (Sign(target_percent) != Sign(controller->previous_target)) {
         controller->integral = 0;
         controller->previous_error = 0;
-    }/*确保同方向*/
+    }//确保同方向
 
-    error = target_counts - measured_counts;/*误差=编码器目标计数-实际计数*/
-    derivative = error - controller->previous_error;/*误差改变量=本次误差-上一次误差*/
+    error = target_counts - measured_counts;//误差=编码器目标计数-实际计数
+    derivative = error - controller->previous_error;//误差改变量=本次误差-上一次误差
     previous_integral = controller->integral;
     controller->integral = Clamp(controller->integral + error,
-                                 -PID_MOTOR_INTEGRAL_LIMIT,
-                                 PID_MOTOR_INTEGRAL_LIMIT);
-    /*钳制,错误累积项，为了处理部分微小累积误差*/
-     correction = (s_kp * error +
-                   s_ki * controller->integral +
-                   s_kd * derivative) / PID_MOTOR_GAIN_SCALE;
-    /*防止输出pwm过大*/
+                                 -pid_motor_integral_limit,
+                                 pid_motor_integral_limit);
+    //钳制,错误累积项，为了处理部分微小累积误差
+     correction = (motor_kp * error +
+                   motor_ki * controller->integral +
+                   motor_kd * derivative) / PID_MOTOR_GAIN_SCALE;
+    //防止输出pwm过大
     if (target_percent > 0) {
         output = Clamp(target_percent + correction, 0, 100);
     } else {
         output = Clamp(target_percent + correction, -100, 0);
     }
 
-    /*抗积分饱和*/
+    //抗积分饱和
     if (((target_percent > 0) &&
          (((output == 100) && (error > 0)) ||
           ((output == 0) && (error < 0)))) ||
@@ -137,14 +146,14 @@ void GROUP1_IRQHandler(void)
 {
     int right_pins = MOTOR_DIR1_CH_1_PIN | MOTOR_DIR1_CH_2_PIN;
     int left_pins = MOTOR_DIR2_CH_11_PIN | MOTOR_DIR2_CH_22_PIN;
-    //读取编码器引脚是否有中断待处理 pending=0无中断//
+    //读取编码器引脚是否有中断待处理 pending=0无中断
     int pending = DL_GPIO_getEnabledInterruptStatus(
         GPIOA, right_pins | left_pins);
 
     if (pending != 0) {
-        //清除中断标志//
+        //清除中断标志
         DL_GPIO_clearInterruptStatus(GPIOA, pending);
-        int levels = DL_GPIO_readpins(GPIOA, right_pins | left_pins);
+        int levels = DL_GPIO_readPins(GPIOA, right_pins | left_pins);
 
 
         int current_right=0;
@@ -158,7 +167,7 @@ void GROUP1_IRQHandler(void)
         if ((history_right ^ current_right) == 3) {
             right_error_count++; // 非法跳变计数+1
         }
-        // 组合成 4 bit 索引，并查表更新计数 //
+        // 组合成 4 bit 索引，并查表更新计数 
         int right = (history_right << 2) | current_right;
         right_encoder_count += encoder_transition[right];
         
@@ -177,7 +186,7 @@ void GROUP1_IRQHandler(void)
         if ((history_left ^ current_left) == 3) {
             left_error_count++; // 非法跳变计数+1
         }
-        // 组合成 4 bit 索引，并查表更新计数 //
+        // 组合成 4 bit 索引，并查表更新计数 
         int left = (history_left << 2) | current_left;
         left_encoder_count += encoder_transition[left];
         

@@ -1,4 +1,9 @@
 {
   "folders": [{"path": "."}],
-  "settings": {}
+  "settings": {
+    "C_Cpp.intelliSenseEngine": "default",
+    "C_Cpp.errorSquiggles": "enabled",
+    "editor.renderValidationDecorations": "on",
+    "tasks.saveBeforeRun": "always"
+  }
 }

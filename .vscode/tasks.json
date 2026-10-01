@@ -7,7 +7,15 @@
       "command": "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
       "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/build.ps1"],
       "group": {"kind": "build", "isDefault": true},
-      "problemMatcher": "$gcc"
+      "options": {"cwd": "${workspaceFolder}"},
+      "problemMatcher": {
+        "base": "$gcc",
+        "owner": "tiarmclang",
+        "source": "TI ARM Clang",
+        "fileLocation": "absolute",
+        "applyTo": "allDocuments"
+      },
+      "presentation": {"reveal": "always", "revealProblems": "onProblem", "panel": "dedicated", "clear": true}
     },
     {
       "label": "MSPM0: Check wireless connection",

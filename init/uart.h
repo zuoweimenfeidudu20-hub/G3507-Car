@@ -4,5 +4,5 @@
 #include <stdint.h>
 
 void UART_SendString(const char *string);
-void Send_Motor_Status(void);
+void motor_encoder_condition(void);
 #endif /* UART_H_ */
