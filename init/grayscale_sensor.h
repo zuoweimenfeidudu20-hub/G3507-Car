@@ -3,12 +3,27 @@
 
 #include <stdint.h>
 
-#define GRAYSCALE_SENSOR_COUNT 8U
+#define gray_sensor 8
+#define black_level 1
 
-/* The new digital sensors output 1 on a black line. */
-#define GRAYSCALE_BLACK_LEVEL 1U
+#define integral_limit 200//积分限幅
+#define output_limit 
+#define pid_scale 
+#define kp 
+#define ki
+#define kd
 
-void Grayscale_Sensor_Init(void);
-void Grayscale_Sensor_ReadAll(uint8_t values[GRAYSCALE_SENSOR_COUNT]);
+typedef struct
+{
+    int kp;
+    int ki;
+    int kd;
 
-#endif /* GRAYSCALE_SENSOR_H_ */
+    int integral;
+    int previous_error;
+
+    int int_limit;
+    int output_limit;
+}track_pid;
+#endif 
+

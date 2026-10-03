@@ -1,9 +1,10 @@
 #include "ti_msp_dl_config.h"
 #include "motor.h"
+#include "pid_motor.h"
 
 #define PWM_PERIOD 1600U
 
-void RightMotor_SetSpeed(uint32_t percent)
+void rightmotor_pwm(uint32_t percent)
 {
     if (percent > 100U) {
         percent = 100U;
@@ -15,7 +16,7 @@ void RightMotor_SetSpeed(uint32_t percent)
     DL_TimerA_setCaptureCompareValue(PWM_motor_INST,compare,GPIO_PWM_motor_C0_IDX);
 }
 
-void LeftMotor_SetSpeed(uint32_t percent)
+void leftmotor_pwm(uint32_t percent)
 {
     if (percent > 100U) {
         percent = 100U;
@@ -28,64 +29,88 @@ void LeftMotor_SetSpeed(uint32_t percent)
 }
 
 
-void RightMotor_Stop(void)
+void rightmotor_stop(void)
 {
     DL_GPIO_clearPins(MOTOR_DIR1_AIN1_PORT, MOTOR_DIR1_AIN1_PIN);
     DL_GPIO_clearPins(MOTOR_DIR1_AIN2_PORT, MOTOR_DIR1_AIN2_PIN);
-    RightMotor_SetSpeed(0);
+    rightmotor_pwm(0);
 }
 
 
-void RightMotor_Forward(uint32_t speed)
+void rightmotor_forward(uint32_t speed)
 {
     DL_GPIO_setPins(MOTOR_DIR1_AIN1_PORT, MOTOR_DIR1_AIN1_PIN);
     DL_GPIO_clearPins(MOTOR_DIR1_AIN2_PORT, MOTOR_DIR1_AIN2_PIN);
-    RightMotor_SetSpeed(speed);
+    rightmotor_pwm(speed);
 }
 
-void RightMotor_Reverse(uint32_t speed)
+void rightmotor_reverse(uint32_t speed)
 {
     DL_GPIO_clearPins(MOTOR_DIR1_AIN1_PORT, MOTOR_DIR1_AIN1_PIN);
     DL_GPIO_setPins(MOTOR_DIR1_AIN2_PORT, MOTOR_DIR1_AIN2_PIN);
-    RightMotor_SetSpeed(speed);
+    rightmotor_pwm(speed);
 }
 
 
-void LeftMotor_Stop(void)
+void leftmotor_stop(void)
 {
     DL_GPIO_clearPins(MOTOR_DIR2_BIN1_PORT, MOTOR_DIR2_BIN1_PIN);
     DL_GPIO_clearPins(MOTOR_DIR2_BIN2_PORT, MOTOR_DIR2_BIN2_PIN);
-    LeftMotor_SetSpeed(0);
+    leftmotor_pwm(0);
 }
 
-void LeftMotor_Forward(uint32_t speed)
+void leftmotor_forward(uint32_t speed)
 {
     DL_GPIO_setPins(MOTOR_DIR2_BIN1_PORT, MOTOR_DIR2_BIN1_PIN);
     DL_GPIO_clearPins(MOTOR_DIR2_BIN2_PORT, MOTOR_DIR2_BIN2_PIN);
 
-    LeftMotor_SetSpeed(speed);
+    leftmotor_pwm(speed);
 }
 
-void LeftMotor_Reverse(uint32_t speed)
+void leftmotor_reverse(uint32_t speed)
 {
     DL_GPIO_clearPins(MOTOR_DIR2_BIN1_PORT, MOTOR_DIR2_BIN1_PIN);
     DL_GPIO_setPins(MOTOR_DIR2_BIN2_PORT, MOTOR_DIR2_BIN2_PIN);
-    LeftMotor_SetSpeed(speed);
+    leftmotor_pwm(speed);
 }
 
-void AllMotor_Stop(void)
+void allstop(void)
 {
-    RightMotor_Stop();
-    LeftMotor_Stop();
+    rightmotor_stop();
+    leftmotor_stop();
 }
 
-uint32_t Motor_Clamp(int32_t percent)
+int32_t motor_clamp(int32_t percent)
 {
-    if ((percent > 100) || (percent < -100)) {
+    if (percent > 100) {
         return 100;
     }
-    if (percent < 0) {
-        percent = -percent;
+    if (percent < -100) {
+        return -100;
     }
-    return (uint32_t) percent;
+    return percent;
+}
+
+void rightmotor_output(int32_t output)
+{
+    output=motor_clamp(output);
+    if(output>0){
+        rightmotor_forward((uint32_t)output);
+    }else if(output<0){
+        rightmotor_reverse((uint32_t)(-output));
+    }else{
+        rightmotor_stop();
+    }
+}
+
+void leftmotor_output(int32_t output)
+{
+    output=motor_clamp(output);
+    if(output>0){
+        leftmotor_forward((uint32_t)output);
+    }else if(output<0){
+        leftmotor_reverse((uint32_t)(-output));
+    }else{
+        leftmotor_stop();
+    }
 }
