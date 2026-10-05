@@ -114,3 +114,9 @@ void leftmotor_output(int32_t output)
         leftmotor_stop();
     }
 }
+
+extern void track_stop()
+{
+
+
+}

@@ -107,8 +107,10 @@ int pid_motor(PIDMotor_Controller *controller,
     //防止输出pwm过大
     if (target_percent > 0) {
         output = Clamp(target_percent + correction, 0, 100);
-    } else {
+    }else if(target_percent<0){
         output = Clamp(target_percent + correction, -100, 0);
+    }else{
+        pidmotor_rst(controller);
     }
 
     //抗积分饱和

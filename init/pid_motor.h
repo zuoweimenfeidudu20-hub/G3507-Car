@@ -28,6 +28,9 @@ extern volatile int init_leftpwm;
 extern PIDMotor_Controller left_pid;
 extern PIDMotor_Controller right_pid;
 
+extern volatile int init_rightpwm;
+extern volatile int init_leftpwm;
+
 #define pid_motor_gain_scale             (100)
 #define motor_kp             (250)
 #define motor_ki             (3)
