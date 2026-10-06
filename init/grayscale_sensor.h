@@ -8,6 +8,8 @@
 
 
 #define base_pwm 35
+#define track_scale 100
+
 
 //结构体位置有要求吗
 typedef struct
@@ -26,7 +28,7 @@ typedef struct
 
 void sensor_read(int values[gray_sensor]);
 int track_count(const int values[8]);
-trackstate track_analyze(int values[8],int *error);
+trackpattern track_analyze(int values[gray_sensor],int *error);
 void track_controll(void);
 int line_pid(track_pid *pid,int error);
 void set_target(int pwm,int correction);
