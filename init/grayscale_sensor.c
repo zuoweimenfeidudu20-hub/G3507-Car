@@ -5,6 +5,22 @@
 
 //mission run_mode=normal;
 
+int state_ticks=0;
+int current_cnt=0;
+bool event_condition=false;
+
+//先调ki,后调kp,kd
+track_pid control={
+    .kp=0,
+    .ki=0,
+    .kd=0,
+
+    .integral=0,
+    .previous_error=0,
+
+    .track_int_limit=500,//积分限幅
+    .output_limit=5//输出限幅
+};
 
 typedef struct {
     GPIO_Regs *port;
@@ -24,7 +40,7 @@ static const Grayscale_Pin pins[gray_sensor] = {
     {Grays_GRAY8_PORT, Grays_GRAY8_PIN}
 };
 
-static const int weights[8]={-3500,-2500,-1500,-500,500,1500,2500,3500};
+static const int weights[gray_sensor]={-3500,-2500,-1500,-500,500,1500,2500,3500};
 
 void sensor_read(int values[gray_sensor])
 {
@@ -43,7 +59,7 @@ void sensor_read(int values[gray_sensor])
 }
 
 //计算识别到黑线传感器数量  ??逻辑??
-int track_count(const int values[8])
+int track_count(int values[8])
 {
     int count=0;
     for(int i=0;i<8;i++){
@@ -75,13 +91,13 @@ typedef enum
 //小车任务，该怎么走   1,2模式区分
 typedef enum
 {
-    state_line,//楼梯状态前
+    state_line,//楼梯状态前/普通循迹
     state_c_lockstraight,//模式1：cross路口直行
     state_c_lockright,//2:锁定右转
-    state_stair1,//1楼梯内部普通巡线
+    state_stair1,//1楼梯内部普通巡线(中间+第一次主线路返程)
     state_teshu_lockleft1,//中间识别到白色，锁定左转直到最右边传感器识别到黑线
     state_branch_lockleft,//识别到左边黑色延申，锁定左转直到右边传感器识别到黑线
-    state_stair2,//2普通寻
+    state_stair2,//2楼梯线路过程中的普通循迹
     state_teshu_lockright2,//中间识别到白色，锁定右转
     state_f,//出楼梯---循迹结束
     state_stop,
@@ -123,7 +139,11 @@ trackpattern track_analyze(int values[gray_sensor],int *error)
         return pattern_allblack;
     }
     bool center_gray=values[3]||values[4];
-    //特殊路况
+    //特殊路况 zhijiaowan
+    if(center_gray&&right_count>=3&&left_count==0)
+    {
+        return pattern_r90;
+    }
     if (center_gray&&right_count>=1&&left_count==0)
     {
         return pattern_rightbranch;
@@ -132,21 +152,10 @@ trackpattern track_analyze(int values[gray_sensor],int *error)
     {
         return pattern_leftbranch;
     }
-    //直角弯
-    if(center_gray&&right_count>=3&&left_count==0)
-    {
-        return pattern_r90;
-    }
     return pattern_line;
 }
 
-//??
-trackpattern control_state;
 trackstate current_state=state_line;
-int state_ticks=0;
-int current_cnt=0;
-bool event_condition=false;
-
 void track_controll(void)
 {
     int sensors[gray_sensor]={0};
@@ -162,23 +171,117 @@ void track_controll(void)
     bool maxleft=sensors[0]||sensors[1];//最左边两个任一
     bool maxright=sensors[6]||sensors[7];//同
     //嵌套状态，外层：小车当前执行状态
-    switch(control_state)
+    switch(current_state)
     {
-        case current_state:
+        case state_line:
             switch(pattern)
             {
                 case pattern_line:
                 correction=line_pid(&control,error);
                 set_target(base_pwm,correction);
                 break;
+                
+                case pattern_rightbranch:
+                //右边3个任意多个传感器识别到黑线
+                    correction=line_pid(&control,error);
+                    set_target(base_pwm,correction);
 
-                case pattern_lost:
+                    if(track_confirm((pattern_rightbranch),3)){
+                        condition_rst(state_c_lockright);
+                    }
+                break;
 
+                case pattern_leftbranch:
+                //左边3个传感器任意多个识别到黑线
+                    correction=line_pid(&control,error);
+                    set_target(base_pwm,correction);
+
+                    if(track_confirm((pattern_leftbranch),3)){
+                        condition_rst(state_branch_lockleft);
+                    }
+                break;
+
+                case pattern_r90:
+
+                break;
+
+                // case pattern_lost:
+                // //识别上一次识别情况保持上次方向，阻塞2s，若任无新识别黑线状态，停机
+                
+                // break;
             }
+        break;
+        //通过时路口直行
+        case state_c_lockstraight:
+            set_target(base_pwm,0);
+            if(track_confirm(pattern==pattern_line,3)){
+                condition_rst(state_line);
+            }
+            break;
+
+        //锁死右转，至左侧最外两个任一识别到黑线
+        case state_c_lockright:
+            set_target(base_pwm,5);
+            if(maxleft==1){
+                condition_rst(state_stair1);
+            }
+            break;
+
+        case state_stair1:
+            set_target(base_pwm,correction);
+            if(center_bianhua(sensors)==1){
+                condition_rst(state_teshu_lockleft1);
+            }
+            else if(track_confirm((pattern==pattern_leftbranch),2)){
+                condition_rst(state_branch_lockleft);
+            }
+            break;
+
+        case state_teshu_lockleft1:
+            set_target(base_pwm,-5);
+            if(maxright==1){
+                condition_rst(state_stair1);
+            }
+            break;
+
+        case state_branch_lockleft:
+            set_target(base_pwm,-5);
+            if(maxright==1){
+                condition_rst(state_stair2);
+            }
+            break;
+
+        case state_stair2:
+            set_target(base_pwm,correction);
+            break;
+
+        case state_teshu_lockright2:
+            if(track_confirm((pattern==pattern_rightbranch),2)){
+                set_target(base_pwm,5);
+                if(maxleft==1){
+                    condition_rst(state_f);
+                }
+            }
+            break;
+
+        case state_f:
+            set_target(base_pwm,correction);
+            break;
+
+        case state_stop:
+            set_target(0,0);
+            allstop();
+            break;
+
+        case state_fault:
+        default: 
+            set_target(0,0);
+            allstop();
+            break;
     }
 }
 
-//两次状态确认进入某状态,滤波,require    只返回1/0
+//两次状态确认进入某状态,滤波,require，（状况真假，审计n次）只返回1/0
 bool track_confirm(bool condition,int require)
 {
     if(condition){
@@ -195,7 +298,11 @@ bool track_confirm(bool condition,int require)
 //中间传感器黑变白
 bool center_bianhua(int sensors[gray_sensor])
 {
-    
+    static bool shangci_init=true;//1为黑色
+    bool current_mid=sensors[3]||sensors[4];
+    bool change=shangci_init&&!current_mid;
+    shangci_init=current_mid;
+    return change;
 }
 
 //切换状态清0
@@ -209,18 +316,6 @@ void condition_rst(trackstate next)
     trackpid_rst(&control,0);
 }
 
-//先调ki,后调kp,kd
-track_pid control={
-    .kp=0,
-    .ki=0,
-    .kd=0,
-
-    .integral=0,
-    .previous_error=0,
-
-    .track_int_limit=500,//积分限幅
-    .output_limit=5//输出限幅
-};
 //输出correction纠正力度大小
 int line_pid(track_pid *pid,int error)
 {
@@ -259,7 +354,7 @@ void set_target(int pwm,int correction)
     init_leftpwm=left_target;
 }
 
-//直角，避障90°转弯
-void set_target90r()
+// //直角，避障90°转弯
+// void set_target90r()
 
 

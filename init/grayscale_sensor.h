@@ -11,7 +11,6 @@
 #define track_scale 100
 
 
-//结构体位置有要求吗
 typedef struct
 {
     int kp;

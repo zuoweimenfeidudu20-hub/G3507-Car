@@ -111,6 +111,7 @@ int pid_motor(PIDMotor_Controller *controller,
         output = Clamp(target_percent + correction, -100, 0);
     }else{
         pidmotor_rst(controller);
+        output=0;
     }
 
     //抗积分饱和
