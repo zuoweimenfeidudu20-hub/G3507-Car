@@ -22,6 +22,7 @@ const SYSCTL = scripting.addModule("/ti/driverlib/SYSCTL");
 const TIMER  = scripting.addModule("/ti/driverlib/TIMER", {}, false);
 const TIMER1 = TIMER.addInstance();
 const TIMER2 = TIMER.addInstance();
+const TIMER3 = TIMER.addInstance();
 const UART   = scripting.addModule("/ti/driverlib/UART", {}, false);
 const UART1  = UART.addInstance();
 const UART2  = UART.addInstance();
@@ -289,6 +290,16 @@ TIMER1.timerPeriod        = "10 ms";
 TIMER1.timerMode          = "PERIODIC";
 TIMER1.interrupts         = ["ZERO"];
 TIMER1.peripheral.$assign = "TIMG0";
+
+// 32 MHz / 8 / 8 = 500 kHz; 500 counts = 1 ms per key scan tick.
+TIMER3.$name = "key_timer";
+TIMER3.timerClkDiv = 8;
+TIMER3.timerClkPrescale = 8;
+TIMER3.timerPeriod = "1 ms";
+TIMER3.timerMode = "PERIODIC";
+TIMER3.timerStartTimer = true;
+TIMER3.interrupts = ["ZERO"];
+TIMER3.peripheral.$assign = "TIMG7";
 
 UART1.$name                    = "UART_0";
 UART1.targetBaudRate           = 115200;

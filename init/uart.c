@@ -14,7 +14,6 @@ void UART_SendString(const char *string)
 
 void motor_encoder_condition(void)
 {
-    // 定义一个能容纳 64 个字符的临时数组
     char tx_buffer[192]; 
     // %d 代表十进制有符号整数
     snprintf(tx_buffer, sizeof(tx_buffer), 
