@@ -29,17 +29,15 @@ static void HCSR04_Trigger(void)
 
 void HCSR04_Init(void)
 {
-    uint32_t saved_mask = __get_PRIMASK();
-    __disable_irq();
+    
     DL_TimerG_stopCounter(hcsr04_timer_INST);
     DL_GPIO_clearPins(HCSR04_TRIG_PORT, HCSR04_TRIG_PIN);
-    s_state = IDLE;
-    s_echo_ticks = 0U;
-    s_enabled = 1U;
+    
+
     DL_TimerG_setTimerCount(hcsr04_timer_INST, hcsr04_timer_INST_LOAD_VALUE);
     DL_TimerG_clearInterruptStatus(hcsr04_timer_INST, DL_TIMERG_INTERRUPT_ZERO_EVENT);
     NVIC_ClearPendingIRQ(hcsr04_timer_INST_INT_IRQN);
-    /* Same priority as GPIO: timeout and edge processing cannot preempt each other. */
+
     NVIC_SetPriority(hcsr04_timer_INST_INT_IRQN, 0U);
     NVIC_SetPriority(GPIO_MULTIPLE_GPIOA_INT_IRQN, 0U);
     DL_GPIO_enableInterrupt(HCSR04_ECHO_PORT, HCSR04_ECHO_PIN);
@@ -47,7 +45,7 @@ void HCSR04_Init(void)
     NVIC_EnableIRQ(hcsr04_timer_INST_INT_IRQN);
     DL_TimerG_startCounter(hcsr04_timer_INST);
     HCSR04_Trigger();
-    if (saved_mask == 0U) __enable_irq();
+    
 }
 
 float HCSR04_GetDistance(void)
@@ -75,7 +73,7 @@ void HCSR04_HandleEchoInterrupt(void)
         s_state = WAIT_FALL;
     } else if (high == 0U && s_state == WAIT_FALL) {
         uint32_t ticks = (s_rise_count >= count) ? s_rise_count - count : 0U;
-        /* HC-SR04 nominal measurement range: 2..400 cm. */
+        
         s_echo_ticks = (ticks >= 58U && ticks <= 11600U) ? ticks : 0U;
         s_state = IDLE;
     }
@@ -84,7 +82,6 @@ void HCSR04_HandleEchoInterrupt(void)
 void hcsr04_timer_INST_IRQHandler(void)
 {
     if (DL_TimerG_getPendingInterrupt(hcsr04_timer_INST) == DL_TIMERG_IIDX_ZERO) {
-        if (s_state != IDLE) s_echo_ticks = 0U;
-        HCSR04_Trigger();
+        
     }
 }

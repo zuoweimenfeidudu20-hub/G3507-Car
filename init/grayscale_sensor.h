@@ -2,6 +2,7 @@
 #define GRAYSCALE_SENSOR_H_
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #define gray_sensor 8
 #define black_level 1
@@ -26,7 +27,8 @@ typedef enum
 typedef enum
 {
     state_line,//楼梯状态前/普通循迹
-    state_c_lockstraight,//模式1：cross路口直行
+    state_c_lockstraight1,//模式1：cross路口直行
+    state_c_lockstraight2,//1:第2段路程cross直行
     state_c_lockright,//2:锁定右转
     state_stair1,//1楼梯内部普通巡线(中间+第一次主线路返程)
     state_teshu_lockleft1,//中间识别到白色，锁定左转直到最右边传感器识别到黑线
@@ -57,8 +59,7 @@ trackpattern track_analyze(int values[gray_sensor],int *error);
 void track_controll(void);
 int line_pid(track_pid *pid,int error);
 void set_target(int pwm,int correction);
-void condition_rst(trackstate next);
-void trackpid_rst(track_pid *pid,int error);
+extern void condition_rst(trackstate next);
 void trackpid_rst(track_pid *pid,int error);
 int track_count(int values[8]);
 bool track_confirm(bool condition,int require);

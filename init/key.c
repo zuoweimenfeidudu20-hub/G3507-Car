@@ -1,6 +1,7 @@
 #include "ti_msp_dl_config.h"
 #include "key.h"
-
+#include "grayscale_sensor.h"
+#include "motor.h"
 #define KEY_DEBOUNCE_TICKS (3)
 
 typedef struct
@@ -89,7 +90,7 @@ void key_tick30ms()
                 break;
                 
                 case state_press:
-                    if(pressed==0){
+                    if(pressed==1){
                         keys[i].state=state_release;
                         keys[i].ticks=0;
                     }
@@ -114,16 +115,13 @@ void key_tick30ms()
             break;
         }
     }
-
 }
 
 
 void key_init(void)
 {
-    int i;
-
     mode=key_idle;
-    for(i=0;i<4;i++){
+    for(int i=0;i<4;i++){
         keyid id=i;
         if(Key_ReadPress(id)==0){
             keys[i].state=state_press;
@@ -133,7 +131,7 @@ void key_init(void)
         keys[i].ticks=0;
     }
 }
-//查询状态
+//根据当前
 void keyscan(void)
 {
     int i;
@@ -142,6 +140,7 @@ void keyscan(void)
         int press=Key_ReadPress(id);
         switch(keys[i].state){
             case state_idle:
+                set_target(0,0);
                 allstop();
 
             case state_press:
@@ -157,8 +156,12 @@ keymode key_getmode(void)
 
 void key_timer_INST_IRQHandler()
 {
+    static int ticks=0;
     if (DL_TimerG_getPendingInterrupt(key_timer_INST) ==
         DL_TIMERG_IIDX_ZERO) {
-        key_tick10ms();
+        if(ticks++>=30){
+            ticks=0;
+            keyscan();
+        }
     }
 }

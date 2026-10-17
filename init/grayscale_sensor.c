@@ -8,6 +8,8 @@
 int state_ticks=0;
 int current_cnt=0;
 bool event_condition=false;
+static volatile int lost_ticks=0;
+static volatile int recover_ticks=0;
 
 //先调ki,后调kp,kd
 track_pid control={
@@ -145,11 +147,34 @@ void track_controll(void)
     state_ticks++;
     bool maxleft=sensors[0]||sensors[1];//最左边两个任一
     bool maxright=sensors[6]||sensors[7];//同
+
+
     //嵌套状态，外层：小车当前执行状态
     switch(current_state)
     {
         case state_line:
-            switch(pattern)
+        if(pattern!=pattern_lost){
+            lost_ticks=0;
+        }
+
+        if(pattern==pattern_lost){
+            recover_ticks=0;
+            if(lost_ticks++>=200){
+                condition_rst(state_stop);
+                set_target(0,0);
+            }
+            break;
+        }
+        if(lost_ticks!=0){
+            lost_ticks++;
+            if(recover_ticks++<3){
+                break;
+            }
+            lost_ticks=0;
+            recover_ticks=0;
+        }
+
+        switch(pattern)
             {
                 case pattern_line:
                 correction=line_pid(&control,error);
@@ -161,7 +186,7 @@ void track_controll(void)
                     correction=line_pid(&control,error);
                     set_target(base_pwm,correction);
 
-                    if(track_confirm((pattern_rightbranch),3)){
+                    if(track_confirm((pattern==pattern_rightbranch),3)){
                         condition_rst(state_c_lockright);
                     }
                 break;
@@ -171,7 +196,7 @@ void track_controll(void)
                     correction=line_pid(&control,error);
                     set_target(base_pwm,correction);
 
-                    if(track_confirm((pattern_leftbranch),3)){
+                    if(track_confirm((pattern==pattern_leftbranch),3)){
                         condition_rst(state_branch_lockleft);
                     }
                 break;
@@ -180,14 +205,19 @@ void track_controll(void)
 
                 break;
 
-                // case pattern_lost:
-                // //识别上一次识别情况保持上次方向，阻塞2s，若任无新识别黑线状态，停机
-                
-                // break;
+                case pattern_lost:
+                //识别上一次识别情况保持上次方向，阻塞2s，若任无新识别黑线状态，停机
+                    if(lost_ticks++>=200){
+                        condition_rst(state_stop);
+                        set_target(0,0);
+                        recover_ticks=0;
+                        lost_ticks=0;
+                    }
+                break;
             }
         break;
         //通过时路口直行
-        case state_c_lockstraight:
+        case state_c_lockstraight1:
             set_target(base_pwm,0);
             if(track_confirm(pattern==pattern_line,3)){
                 condition_rst(state_line);
@@ -204,7 +234,7 @@ void track_controll(void)
 
         case state_stair1:
             set_target(base_pwm,correction);
-            if(center_bianhua(sensors)==1){
+            if(track_confirm((center_bianhua(sensors)==1),2)){
                 condition_rst(state_teshu_lockleft1);
             }
             else if(track_confirm((pattern==pattern_leftbranch),2)){
@@ -214,20 +244,23 @@ void track_controll(void)
 
         case state_teshu_lockleft1:
             set_target(base_pwm,-5);
-            if(maxright==1){
+            if(track_confirm((maxright==1),2)){
                 condition_rst(state_stair1);
             }
             break;
 
         case state_branch_lockleft:
             set_target(base_pwm,-5);
-            if(maxright==1){
+            if(track_confirm((maxright==1),2)){
                 condition_rst(state_stair2);
             }
             break;
 
         case state_stair2:
             set_target(base_pwm,correction);
+            if(track_confirm((center_bianhua(sensors)==1),2)){
+                condition_rst(state_teshu_lockright2);
+            }
             break;
 
         case state_teshu_lockright2:
@@ -274,14 +307,14 @@ bool track_confirm(bool condition,int require)
 bool center_bianhua(int sensors[gray_sensor])
 {
     static bool shangci_init=true;//1为黑色
-    bool current_mid=sensors[3]||sensors[4];
-    bool change=shangci_init&&!current_mid;
-    shangci_init=current_mid;
+    bool current_midium=sensors[3]||sensors[4];
+    bool change=shangci_init&&!current_midium;
+    shangci_init=current_midium;
     return change;
 }
 
 //切换状态清0
-void condition_rst(trackstate next)
+extern void condition_rst(trackstate next)
 {
     current_state=next;
     state_ticks=0;

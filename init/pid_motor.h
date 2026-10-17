@@ -24,7 +24,6 @@ extern volatile int left_output;
 extern volatile int init_rightpwm;
 extern volatile int init_leftpwm;
 
-
 extern PIDMotor_Controller left_pid;
 extern PIDMotor_Controller right_pid;
 
