@@ -23,6 +23,7 @@ const TIMER  = scripting.addModule("/ti/driverlib/TIMER", {}, false);
 const TIMER1 = TIMER.addInstance();
 const TIMER2 = TIMER.addInstance();
 const TIMER3 = TIMER.addInstance();
+const TIMER4 = TIMER.addInstance();
 const UART   = scripting.addModule("/ti/driverlib/UART", {}, false);
 const UART1  = UART.addInstance();
 const UART2  = UART.addInstance();
@@ -300,6 +301,15 @@ TIMER3.timerMode = "PERIODIC";
 TIMER3.timerStartTimer = true;
 TIMER3.interrupts = ["ZERO"];
 TIMER3.peripheral.$assign = "TIMG7";
+
+// 32 MHz / 8 / 8 = 500 kHz; 20000 counts = 40 ms.
+TIMER4.$name = "track_timer";
+TIMER4.timerClkDiv = 8;
+TIMER4.timerClkPrescale = 8;
+TIMER4.timerPeriod = "40 ms";
+TIMER4.timerMode = "PERIODIC";
+TIMER4.interrupts = ["ZERO"];
+TIMER4.peripheral.$assign = "TIMG8";
 
 UART1.$name                    = "UART_0";
 UART1.targetBaudRate           = 115200;

@@ -23,13 +23,13 @@ typedef enum
     state_idle,             // 空闲待机
     state_press_debounce,          // 按下消抖
     state_press,          //稳定按下
-    state_release     //松开消抖
+    state_release,     //松开消抖
 }keystate;
 //确认按键状态维持时间，防止误触
 typedef struct
 {
     volatile keystate state;
-    int ticks;
+    volatile int ticks;
 }keycontrol;
 
 static keycontrol keys[4];//4个按键各自保存一个状态
@@ -59,7 +59,7 @@ void key_selectmode(keyid id)
     }
 }
 
-void key_tick30ms()
+void key_tick10ms()
 {
     int i;
     for(i=0;i<4;i++){
@@ -84,7 +84,7 @@ void key_tick30ms()
                             keys[i].state=state_press;
                             keys[i].ticks=0;
 
-                            key_selectmode(id);
+                            key_selectmode(i);
                         }
                     }
                 break;
@@ -92,6 +92,9 @@ void key_tick30ms()
                 case state_press:
                     if(pressed==1){
                         keys[i].state=state_release;
+                        keys[i].ticks=0;
+                    }else if(++keys[i].ticks>=2){
+                        key_selectmode(i);
                         keys[i].ticks=0;
                     }
                 break;
@@ -117,34 +120,52 @@ void key_tick30ms()
     }
 }
 
-
-void key_init(void)
-{
-    mode=key_idle;
-    for(int i=0;i<4;i++){
-        keyid id=i;
-        if(Key_ReadPress(id)==0){
-            keys[i].state=state_press;
-        }else{
-            keys[i].state=state_idle;
-        }//轮询保存当前按键状态
-        keys[i].ticks=0;
-    }
-}
-//根据当前
+//根据当前+init
 void keyscan(void)
 {
-    int i;
-    for(i=0;i<4;i++){
+    for(int i=0;i<4;i++){
         keyid id=i;
         int press=Key_ReadPress(id);
         switch(keys[i].state){
             case state_idle:
-                set_target(0,0);
-                allstop();
+                if(press==0){
+                    keys[i].state=state_press_debounce;
+                    keys[i].ticks=1;
+                }//消抖处理
+                break;
+
+            case state_press_debounce:
+                if(press==1){
+                    keys[i].state=state_idle;
+                    keys[i].ticks=0;//误触
+                }else if(++keys[i].ticks>=3){
+                    keys[i].state=state_press;
+                    keys[i].ticks=0;
+                    key_selectmode(i);
+                }
+                break;
 
             case state_press:
+                if(press==1){
+                    keys[i].state=state_press_debounce;
+                    keys[i].ticks=1;//第一次进入消抖
+                }
+                break;
 
+            case state_release:
+                if(press==0){
+                    keys[i].state=state_press;
+                    keys[i].ticks=0;
+                }else if(++keys[i].ticks>=3){
+                    keys[i].state=state_idle;
+                    keys[i].ticks=0;
+                }
+                break;
+
+            default:
+                keys[i].state=state_idle;
+                keys[i].ticks=0;
+                break;
         }
     }
 }
@@ -156,12 +177,12 @@ keymode key_getmode(void)
 
 void key_timer_INST_IRQHandler()
 {
-    static int ticks=0;
+    static uint16_t ticks=0;
     if (DL_TimerG_getPendingInterrupt(key_timer_INST) ==
         DL_TIMERG_IIDX_ZERO) {
-        if(ticks++>=30){
+        if(ticks++>=10){
             ticks=0;
-            keyscan();
+            key_tick10ms();
         }
     }
 }
