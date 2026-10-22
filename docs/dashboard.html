@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MSPM0G3507 智能小车系统架构可视化看板</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .tab-btn.active {
+      background-color: #2563eb;
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased p-4 md:p-8">
+  <div class="max-w-6xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+    
+    <!-- Header -->
+    <div class="p-6 md:p-8 border-b border-slate-200 bg-gradient-to-r from-blue-50 via-indigo-50 to-slate-50">
+      <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">TI MSPM0G3507</span>
+            <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-emerald-100 text-emerald-800">SysConfig v1.26</span>
+            <span class="px-2.5 py-0.5 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">双轮闭环差速控制</span>
+          </div>
+          <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight text-slate-900">智能小车全景系统架构看板</h1>
+          <p class="text-sm text-slate-600 mt-1">硬件类网表、软件层次划分、双闭环算法流与状态机全景概览</p>
+        </div>
+        <div class="text-xs text-slate-600 bg-white px-4 py-3 rounded-xl border border-slate-200 shadow-sm">
+          <div>📁 核心入口: <code class="font-mono font-bold text-blue-600">init.c</code></div>
+          <div>📄 跟踪文档: <code class="font-mono font-bold text-indigo-600">README.md</code> / <code class="font-mono font-bold text-indigo-600">docs/</code></div>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <div class="flex flex-wrap gap-2 mt-6">
+        <button onclick="switchTab('tab-netlist')" id="btn-netlist" class="tab-btn active px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all border border-slate-200">
+          🔌 硬件类网表 (Netlist)
+        </button>
+        <button onclick="switchTab('tab-layers')" id="btn-layers" class="tab-btn px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all border border-slate-200">
+          🏛️ 软件分层架构 (Layers)
+        </button>
+        <button onclick="switchTab('tab-control')" id="btn-control" class="tab-btn px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all border border-slate-200">
+          ⚡ 运动闭环控制流 (PID)
+        </button>
+        <button onclick="switchTab('tab-fsm')" id="btn-fsm" class="tab-btn px-4 py-2 text-xs md:text-sm font-semibold rounded-lg transition-all border border-slate-200">
+          🔄 寻迹状态机 (FSM)
+        </button>
+      </div>
+    </div>
+
+    <!-- Content Sections -->
+    <div class="p-6 md:p-8">
+      
+      <!-- TAB 1: NETLIST -->
+      <div id="tab-netlist" class="tab-pane block space-y-6">
+        <div class="flex items-center justify-between">
+          <h3 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <span>MCU 引脚与外设拓扑映射</span>
+            <span class="text-xs font-normal text-slate-500">(与 init.syscfg 100% 同步)</span>
+          </h3>
+          <span class="text-xs text-slate-500">点击卡片可查看对应引脚与中断机制</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Card: Motors -->
+          <div class="p-5 rounded-xl border border-blue-200 bg-blue-50/40 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-bold text-sm text-blue-800">左右双电机驱动</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold">TIMA1 PWM</span>
+            </div>
+            <ul class="text-xs space-y-1.5 text-slate-600">
+              <li><b class="text-slate-800">右轮方向:</b> PB9 (AIN1) / PA12 (AIN2)</li>
+              <li><b class="text-slate-800">左轮方向:</b> PB0 (BIN1) / PB16 (BIN2)</li>
+              <li><b class="text-slate-800">PWM 输出:</b> PB4 (右轮 C0) / PB1 (左轮 C1)</li>
+              <li><b class="text-slate-800">PWM 周期:</b> 1600 counts (约 20kHz)</li>
+            </ul>
+          </div>
+
+          <!-- Card: Encoders -->
+          <div class="p-5 rounded-xl border border-amber-200 bg-amber-50/40 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-bold text-sm text-amber-800">AB 相测速编码器</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-100 text-amber-800 font-semibold">GPIOA 中断</span>
+            </div>
+            <ul class="text-xs space-y-1.5 text-slate-600">
+              <li><b class="text-slate-800">右轮 AB相:</b> PA16 (CH1) / PA15 (CH2)</li>
+              <li><b class="text-slate-800">左轮 AB相:</b> PA22 (CH11) / PA17 (CH22)</li>
+              <li><b class="text-slate-800">触发机制:</b> 双边沿 (Rise/Fall) 中断</li>
+              <li><b class="text-slate-800">解码方式:</b> 4倍频状态机查表 (16状态)</li>
+            </ul>
+          </div>
+
+          <!-- Card: Grayscale Sensor -->
+          <div class="p-5 rounded-xl border border-emerald-200 bg-emerald-50/40 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-bold text-sm text-emerald-800">8 路灰度循迹阵列</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">GPIO 输入</span>
+            </div>
+            <div class="text-xs text-slate-500 mb-1.5">引脚分布 (从左至右):</div>
+            <div class="grid grid-cols-4 gap-1 text-[11px] font-mono text-center mb-2">
+              <div class="p-1 rounded bg-slate-100">1: PB15</div>
+              <div class="p-1 rounded bg-slate-100">2: PA13</div>
+              <div class="p-1 rounded bg-slate-100">3: PA14</div>
+              <div class="p-1 rounded bg-slate-100">4: PB17</div>
+              <div class="p-1 rounded bg-slate-100">5: PB18</div>
+              <div class="p-1 rounded bg-slate-100">6: PB19</div>
+              <div class="p-1 rounded bg-slate-100">7: PA21</div>
+              <div class="p-1 rounded bg-slate-100">8: PB21</div>
+            </div>
+            <div class="text-[11px] text-emerald-700 font-semibold">权重配置: -3500 ~ +3500 线性加权</div>
+          </div>
+
+          <!-- Card: Ultrasonic -->
+          <div class="p-5 rounded-xl border border-purple-200 bg-purple-50/40 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-bold text-sm text-purple-800">HC-SR04 超声波测距</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-semibold">TIMG6 (100ms)</span>
+            </div>
+            <ul class="text-xs space-y-1.5 text-slate-600">
+              <li><b class="text-slate-800">TRIG 脉冲引脚:</b> PB14 (10us 高脉冲)</li>
+              <li><b class="text-slate-800">ECHO 捕获引脚:</b> PA1 (双边沿中断)</li>
+              <li><b class="text-slate-800">计时精度:</b> 500 kHz (29 ticks/cm)</li>
+              <li class="text-amber-700 font-semibold">⚠️ 需在 GROUP1_IRQHandler 中分发 ECHO 中断</li>
+            </ul>
+          </div>
+
+          <!-- Card: JY901P IMU -->
+          <div class="p-5 rounded-xl border border-indigo-200 bg-indigo-50/40 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-bold text-sm text-indigo-800">JY901P 九轴陀螺仪</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-semibold">UART1 @ 9600</span>
+            </div>
+            <ul class="text-xs space-y-1.5 text-slate-600">
+              <li><b class="text-slate-800">RX 接收引脚:</b> PA18</li>
+              <li><b class="text-slate-800">TX 发送引脚:</b> PA8</li>
+              <li><b class="text-slate-800">标准协议:</b> 11 字节协议帧 (0x55 0x53 角度帧)</li>
+              <li><b class="text-slate-800">提供接口:</b> JY901P_GetYaw / GyroZ</li>
+            </ul>
+          </div>
+
+          <!-- Card: Keys & Debug -->
+          <div class="p-5 rounded-xl border border-rose-200 bg-rose-50/40 hover:shadow-md transition-shadow">
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-bold text-sm text-rose-800">4路按键 & 调试串口</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-rose-100 text-rose-800 font-semibold">UART0 & TIMG7</span>
+            </div>
+            <ul class="text-xs space-y-1 text-slate-600">
+              <li><b class="text-slate-800">K1(普通模式):</b> PB23 | <b class="text-slate-800">K2(特殊模式):</b> PB8</li>
+              <li><b class="text-slate-800">K3(摆动模式):</b> PA3  | <b class="text-slate-800">K4(急停待机):</b> PB13</li>
+              <li><b class="text-slate-800">调试 UART0:</b> PA10(TX) / PA11(RX) 115200bps</li>
+              <li><b class="text-slate-800">OLED I2C0:</b> PA31(SCL) / PA28(SDA) 100kHz</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 2: LAYERS -->
+      <div id="tab-layers" class="tab-pane hidden space-y-4">
+        <h3 class="text-lg font-bold text-slate-900">软件四层体系结构</h3>
+        
+        <div class="space-y-3">
+          <div class="p-4 rounded-xl border border-indigo-200 bg-indigo-50/50">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-indigo-800">第 4 层：业务决策与模式调度层 (Application Layer)</span>
+              <code class="text-xs px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-semibold">init.c / key.c</code>
+            </div>
+            <p class="text-xs text-slate-600 mt-1.5">
+              主循环轮询按键状态机，根据选定模式（普通、特殊路段、摆动循迹）激活对应逻辑；管理系统急停与状态复位。
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl border border-blue-200 bg-blue-50/50">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-blue-800">第 3 层：运动控制与状态机算法层 (Control & Algorithm Layer)</span>
+              <code class="text-xs px-2 py-0.5 rounded bg-blue-100 text-blue-800 font-semibold">grayscale_sensor.c / pid_motor.c</code>
+            </div>
+            <p class="text-xs text-slate-600 mt-1.5">
+              <b>转向外环：</b> 8路灰度加权误差解算、岔路/台阶/丢线状态机识别、转向校正 PID。<br/>
+              <b>速度内环：</b> 10ms 中断触发增量/位置式 PID 计算，双电机目标计数值与实际计数值闭环。
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-emerald-800">第 2 层：设备与传感器驱动层 (Device Drivers)</span>
+              <code class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">motor.c, JY901P.c, hcsr04.c, uart.c</code>
+            </div>
+            <p class="text-xs text-slate-600 mt-1.5">
+              封装具体硬件行为：电机正反转及 PWM 占空比钳位输出、超声波测距定时触发与脉宽换算、JY901P 串口协议校验解包、遥测串口帧打包。
+            </p>
+          </div>
+
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-sm text-slate-800">第 1 层：硬件抽象与外设库 (TI DriverLib / SysConfig HAL)</span>
+              <code class="text-xs px-2 py-0.5 rounded bg-slate-200 text-slate-800 font-semibold">ti_msp_dl_config.c / .h</code>
+            </div>
+            <p class="text-xs text-slate-600 mt-1.5">
+              由 TI SysConfig 工具全自动生成，配置 GPIO、TIMA0/A1、TIMG0/6/7/8、UART0/1、I2C0 与 ADC0 底层时钟分频与中断向量。
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: CONTROL -->
+      <div id="tab-control" class="tab-pane hidden space-y-4">
+        <h3 class="text-lg font-bold text-slate-900">双闭环运动控制数据流</h3>
+        
+        <div class="p-5 rounded-xl border border-slate-200 bg-slate-50 space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-center">
+            <div class="p-4 rounded-lg bg-emerald-100/60 border border-emerald-200">
+              <div class="font-bold text-xs text-emerald-800">① 转向环 (外环)</div>
+              <div class="text-[11px] text-slate-500 mt-1">输入: 8路灰度传感器加权</div>
+              <div class="text-xs font-bold text-emerald-700 mt-1">error = sum(wi) / cnt</div>
+              <div class="text-[11px] text-slate-500 mt-1">输出: correction (偏航校正)</div>
+            </div>
+
+            <div class="p-4 rounded-lg bg-blue-100/60 border border-blue-200">
+              <div class="font-bold text-xs text-blue-800">② 差速分配器</div>
+              <div class="text-[11px] text-slate-500 mt-1">基准: base_pwm = 35%</div>
+              <div class="text-xs font-bold text-blue-700 mt-1">左轮: pwm + correction</div>
+              <div class="text-xs font-bold text-blue-700 mt-0.5">右轮: pwm - correction</div>
+            </div>
+
+            <div class="p-4 rounded-lg bg-amber-100/60 border border-amber-200">
+              <div class="font-bold text-xs text-amber-800">③ 速度闭环 (内环 10ms)</div>
+              <div class="text-[11px] text-slate-500 mt-1">定时器: TIMG0 周期中断</div>
+              <div class="text-xs font-bold text-amber-700 mt-1">反馈: 4倍频实际脉冲数</div>
+              <div class="text-[11px] text-slate-500 mt-1">输出: 电机驱动 PWM 占空比</div>
+            </div>
+          </div>
+
+          <div class="border-t border-slate-200 pt-3 text-xs text-slate-600">
+            <h4 class="font-bold text-slate-800 mb-1">PID 控制器特性：</h4>
+            <ul class="list-disc list-inside space-y-1">
+              <li><b>方向换向清零：</b> 当目标方向反号时，自动重置积分项与历史误差，防止反向冲冲超调。</li>
+              <li><b>双重限幅与抗积分饱和：</b> 积分项严格限制在 <code class="font-mono">[-integral_limit, integral_limit]</code> 之间；在输出已达到 100% 极限且误差继续同向增大时，冻结积分累加。</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: FSM -->
+      <div id="tab-fsm" class="tab-pane hidden space-y-4">
+        <h3 class="text-lg font-bold text-slate-900">寻迹路径识别与动作状态机</h3>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50">
+            <h4 class="text-xs font-bold text-blue-700 uppercase tracking-wider mb-2">地图路况特征识别 (trackpattern)</h4>
+            <ul class="text-xs space-y-2 text-slate-600">
+              <li class="flex items-start gap-2">
+                <span class="font-mono text-emerald-700 font-bold min-w-32">pattern_line</span>
+                <span>正常巡线，黑线在中心传感器附近</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="font-mono text-indigo-700 font-bold min-w-32">pattern_rightbranch</span>
+                <span>右侧传感器识别到分支路线</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="font-mono text-purple-700 font-bold min-w-32">pattern_leftbranch</span>
+                <span>左侧传感器识别到分支路线</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="font-mono text-amber-700 font-bold min-w-32">pattern_r90</span>
+                <span>直角弯道模式</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <span class="font-mono text-rose-700 font-bold min-w-32">pattern_lost</span>
+                <span>全白丢线（cnt=0），保持方向并启动 2s 倒计时</span>
+              </li>
+            </ul>
+          </div>
+
+          <div class="p-4 rounded-xl border border-slate-200 bg-slate-50">
+            <h4 class="text-xs font-bold text-indigo-700 uppercase tracking-wider mb-2">小车执行状态转移 (trackstate)</h4>
+            <div class="text-xs text-slate-600 space-y-1.5">
+              <div class="p-2 rounded bg-white border border-slate-200 font-mono text-[11px]">
+                state_line ──(连续3次右分支)──> state_c_lockright (锁定右转)
+              </div>
+              <div class="p-2 rounded bg-white border border-slate-200 font-mono text-[11px]">
+                state_c_lockright ──(左外踩线)──> state_stair1 (台阶循迹)
+              </div>
+              <div class="p-2 rounded bg-white border border-slate-200 font-mono text-[11px]">
+                state_stair1 ──(中间黑变白)──> state_teshu_lockleft1 (锁定左转)
+              </div>
+              <div class="p-2 rounded bg-white border border-slate-200 font-mono text-[11px]">
+                state_line ──(丢线累计 >200 ticks)──> state_stop (刹车急停)
+              </div>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-2">
+              💡 状态迁移均引入了 <code class="font-mono">track_confirm(cond, req)</code> 多周期连续检测滤波，防止瞬态反射造成误切。
+            </p>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer Status Banner -->
+    <div class="px-6 py-3 border-t border-slate-200 bg-slate-100 flex flex-wrap items-center justify-between text-xs text-slate-600">
+      <div class="flex items-center gap-2">
+        <span class="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+        <span>待解决核心痛点: <b>GROUP1_IRQHandler 中断整合</b> & <b>主循环循迹状态机接入</b></span>
+      </div>
+      <div>详细对接指导已拆分归档于 <code class="font-mono text-blue-600 font-bold">docs/</code> 目录</div>
+    </div>
+  </div>
+
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      
+      document.getElementById(tabId).classList.remove('hidden');
+      
+      const btnId = 'btn-' + tabId.replace('tab-', '');
+      const btn = document.getElementById(btnId);
+      if (btn) btn.classList.add('active');
+    }
+  </script>
+</body>
+</html>
