@@ -5,5 +5,5 @@
 
 void UART_SendString(const char *string);
 void motor_encoder_condition(void);
-
+void motor_rlencoder_cnts(void);
 #endif 

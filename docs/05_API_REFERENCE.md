@@ -2,7 +2,7 @@
 
 ---
 
-## 1. 电机驱动模块 ([init/motor.h](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/motor.h))
+## 1. 电机驱动模块 ([init/motor.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\motor.c))
 
 | 函数声明 | 参数 | 返回值 | 作用描述 |
 | :--- | :--- | :--- | :--- |
@@ -13,7 +13,7 @@
 
 ---
 
-## 2. 闭环控制模块 ([init/pid_motor.h](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/pid_motor.h))
+## 2. 闭环控制模块 ([init/pid_motor.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\pid_motor.h))
 
 ### 2.1 核心函数
 | 函数声明 | 作用描述 |
@@ -34,7 +34,7 @@
 
 ---
 
-## 3. 灰度寻迹模块 ([init/grayscale_sensor.h](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/grayscale_sensor.h))
+## 3. 灰度寻迹模块 ([init/grayscale_sensor.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\grayscale_sensor.h))
 
 | 函数声明 | 作用描述 |
 | :--- | :--- |
@@ -48,7 +48,7 @@
 
 ---
 
-## 4. 按键模块 ([init/key.h](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/key.h))
+## 4. 按键模块 ([init/key.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\key.c))
 
 | 函数声明 | 作用描述 |
 | :--- | :--- |
@@ -59,11 +59,11 @@
 ---
 
 ## 5. 扩展传感器接口
-- **超声波** ([init/hcsr04.h](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/hcsr04.h))：
+- **超声波** ([init/hcsr04.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\hcsr04.h))：
   - `void HCSR04_Init(void)`：启动 100ms 自动测距。
   - `float HCSR04_GetDistance(void)`：获取最近有效距离（厘米）。
-  - `void HCSR04_HandleEchoInterrupt(void)`：ECHO 引脚捕获回调（在 [init/hcsr04_internal.h](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/hcsr04_internal.h) 声明）。
-- **九轴陀螺仪** ([init/JY901P.h](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/JY901P.h))：
+  - `void HCSR04_HandleEchoInterrupt(void)`：ECHO 引脚捕获回调（在 [init/hcsr04_internal.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\hcsr04_internal.h) 声明）。
+- **九轴陀螺仪** ([init/JY901P.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\JY901P.h))：
   - `void JY901P_Init(void)`：初始化串口通信。
   - `bool JY901P_GetYaw(float *yaw_degrees)`：非阻塞读取航向偏航角（-180° ~ +180°）。
   - `bool JY901P_GetGyroZ(float *gyro_z_dps)`：读取 Z 轴旋转角速度。

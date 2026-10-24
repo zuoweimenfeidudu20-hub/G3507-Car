@@ -1,7 +1,9 @@
 # 04 - 状态机体系、赛题场景建模与重构优化方案
 
 > **对应赛题依据**：[题目.md](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/题目.md)（全程匀速循线避障、楼梯多圈闭环、正弦摆动走直线、信标瞄准）  
-> **关联源码**：[init/grayscale_sensor.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/grayscale_sensor.c), [init/key.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/key.c), [init.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init.c)
+> **关联源码**：[init/grayscale_sensor.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\grayscale_sensor.c), [init/key.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\key.c), [init.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.c)
+
+> **伪代码发车方向（顺时针）**：下方右侧停起点朝左发车 → 下方直道向左 → 左侧竖道向上（楼梯入口在车身右侧）→ 左上弯 → 上方直道向右 → 右侧竖道向下 → 下方直道向左回停起点。此约定对应根目录 `应用层状态机切换逻辑_伪代码.c`，尚未接入实际 `init.c` 主循环。
 
 ---
 
@@ -22,7 +24,7 @@
 │      │                                                            │
 └──[合流口B]                                                        │
        │                                                            │
-       └────────────────────────[停起点]────────────────────────────┘
+       └─────────[障碍物]───────────────[停起点]────────────────────────────┘
                   【下方长直道 (Bottom Straight)】
 ```
 
@@ -38,7 +40,7 @@
 
 ## 二、 现有状态机代码缺陷剖析 (Why Refactor?)
 
-原有 [grayscale_sensor.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/grayscale_sensor.c) 中的状态机实现存在严重架构缺陷，仅为**单层离散枚举的单纯罗列**：
+原有 [grayscale_sensor.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\grayscale_sensor.c) 中的状态机实现存在严重架构缺陷，仅为**单层离散枚举的单纯罗列**：
 
 1. **盲人摸象（缺乏空间位姿感知）**：
    - 原状态机仅依靠 8 路灰度的瞬时电平跳转（如 `center_bianhua`），赛道反光、胶带接缝或微小抖动都会导致误入 `state_teshu_lockleft1`；
@@ -47,8 +49,8 @@
    - 题目硬性要求“连续跑满整整两圈，防止漏计多跑”。原状态机仅有 `state_stair1`、`state_stair2`，完全没有圈数计数器与防误判逻辑。
 3. **任务模式与赛道区间未解耦**：
    - 任务 1（不得入楼梯）和任务 2（必须切入楼梯）被混写在一个全局状态流中，导致逻辑互斥。
-4. **恒速指标被破坏**：
-   - 题目硬性要求两轮平均速度 $\frac{V_L + V_R}{2} \equiv V_{\text{target}}$ 恒定。原状态机在转弯时直接写入硬编码常数 `set_target(base_pwm, 5)` 或 `-5`，导致转弯时平均线速度剧烈畸变。
+4. **起步速度规则**：
+   - 按当前任务要求，发车后的首个控制周期直接下发 35% PWM 目标，不设置平滑加速阶段。
 
 ---
 
@@ -72,14 +74,16 @@ graph TD
         NAV_START[START_ZONE 起点出发段]
         NAV_BRANCH[BRANCH_DECISION 楼梯岔路决策点]
         NAV_STAIR_LOOP[STAIR_LOOP 楼梯两圈闭环区]
+        NAV_LEFT_UP[LEFT_UP 楼梯后沿左侧主道继续上行]
         NAV_TOP_STRAIGHT[TOP_STRAIGHT 上方长直道区]
         NAV_RETURN[RETURN_HOME 终点减速回站段]
         NAV_STOP[STOP_DONE 停稳驻车]
 
         NAV_START -->|里程达到岔路前| NAV_BRANCH
-        NAV_BRANCH -->|任务1/3: 锁定主道| NAV_TOP_STRAIGHT
+        NAV_BRANCH -->|任务1/3: 禁止右转入楼梯| NAV_LEFT_UP
         NAV_BRANCH -->|任务2: 切入分支| NAV_STAIR_LOOP
-        NAV_STAIR_LOOP -->|完成两圈且驶出| NAV_TOP_STRAIGHT
+        NAV_STAIR_LOOP -->|完成两圈且从上方出口右转| NAV_LEFT_UP
+        NAV_LEFT_UP -->|到达左上弯| NAV_TOP_STRAIGHT
         NAV_TOP_STRAIGHT -->|直道走完| NAV_RETURN
         NAV_RETURN -->|检测到起点全黑线/里程到| NAV_STOP
     end
@@ -107,24 +111,30 @@ graph TD
 
 ## 四、 核心场景的依赖跳转与防误判设计
 
+### 0. 发车速度与状态转移要求
+
+- **取消强制恒速条件**：状态机不再要求转弯、楼梯、避障和正弦段的双轮平均速度始终等于某个固定值。各路段可根据循迹稳定性与障碍距离调整目标速度；调试时仍需观察实际速度，避免不必要的突变。
+- **直接配置 35% PWM**：从停起点启动后，第一个控制周期直接将基准目标设为 35% PWM。35% 是控制指令，实际轮速仍需通过编码器反馈查看。
+- **起步态退出条件**：起点累计里程达到 30 cm 后转入楼梯前盲区，不再附加“已平滑加速到目标速度”的条件。
+
 ### 1. 楼梯岔路口决策（进 vs 不进 vs 出）
 
-- **空间门限保护**：小车从停起点出发后，设定编码器里程门限 $D_{\text{start\_to\_branch}}$。在未行驶至岔路前，无论传感器怎样误闪，均**屏蔽**任何分支识别状态。
+- **空间门限保护**：小车从下方右侧停起点朝左出发，沿下方直道向左、左侧竖道向上。编码器里程只用于开启岔口识别窗口，例如在标定值附近的 `[D_min, D_max]` 内寻找右侧分支；不能要求里程等于单个数值。进入下一路段时重设该路段的里程基准，避免前段误差逐段传递。
 - **特征识别与动作解耦**：
   - **任务 1 / 任务 3 (外圈直行)**：
-    当检测到左侧探头有黑线延伸（`pattern_leftbranch`）时，导航状态机进入 `NAV_BRANCH_IGNORE`，此时强制冻结转向 PID 的左修正，仅允许右轮适度修正，**锁定贴主干道右沿直行通过**。
+    顺时针上行时楼梯入口在车身右侧。检测到右侧分支（`pattern_rightbranch`）时，仅在岔口窗口内抑制朝右侧分支的转向修正，沿左侧主道继续向上；通过岔口后恢复双向纠偏。
   - **任务 2 (切入楼梯)**：
-    当检测到 `pattern_leftbranch`，立即进入 `NAV_STAIR_ENTER`，向左打大转向角切入楼梯分支；当灰度中心探头重新对准楼梯黑线时，切入 `NAV_STAIR_LOOP`。
+    当检测到 `pattern_rightbranch`，进入 `NAV_STAIR_ENTER`，右转切入楼梯分支；灰度中心探头重新对准楼梯黑线后进入 `NAV_STAIR_LOOP`。在上方合流口完成两圈后，从内侧向西行驶并右转回主道，继续向上到左上弯。
 
 ```mermaid
 flowchart TD
     A[小车出发行驶] --> B{里程达到岔路检测区?}
     B -- 否(盲区保护) --> C[常规匀速循线, 屏蔽分支判断]
     B -- 是 --> D{当前任务模式?}
-    D -- 任务 1 / 3 --> E[忽略左分岔, 强制锁定主道直行]
-    E --> F[平稳进入上方直道]
-    D -- 任务 2 --> G[识别左分岔 pattern_leftbranch]
-    G --> H[执行切入动作, 进入楼梯环线]
+    D -- 任务 1 / 3 --> E[忽略右分岔, 沿左侧主道向上]
+    E --> F[经过左上弯后进入上方直道]
+    D -- 任务 2 --> G[识别右分岔 pattern_rightbranch]
+    G --> H[右转切入楼梯环线]
     H --> I[激活楼梯圈数闭环计数器]
 ```
 
@@ -134,7 +144,7 @@ flowchart TD
 
 题目严苛要求：**跑满整整两圈，不得多跑也不得漏计**。
 
-单纯靠传感器扫线极其容易因楼梯接缝造成重复计数或漏计。优化方案采用 **“陀螺仪累计转角 + 里程窗口 + 黑线特征点” 三重融合仲裁机制**：
+单纯靠传感器扫线极其容易因楼梯接缝造成重复计数或漏计。采用 **“路标触发 + 本圈相对里程窗口 + 连续航向角合理性检查”**：路标是计圈事件，里程与 IMU 限制事件发生的合理区域；不把三个测量值和地图上的单个精确数字做硬相等比较。
 
 ```mermaid
 flowchart LR
@@ -142,14 +152,15 @@ flowchart LR
     ODO[左右轮平均里程 Odo] --> FUSION
     GRAY[楼梯特征分岔标定点] --> FUSION
 
-    FUSION -->|ΔYaw ≈ 360° 且 里程在 [L-Δ, L+Δ]| LAP1[Lap_Count = 1]
-    LAP1 -->|ΔYaw ≈ 720° 且 里程在 [2L-Δ, 2L+Δ]| LAP2[Lap_Count = 2 完成两圈!]
+    FUSION -->|第1次路标事件且本圈里程/航向合理| LAP1[Lap_Count = 1, 重设本圈里程基准]
+    LAP1 -->|第2次路标事件且本圈里程/航向合理| LAP2[Lap_Count = 2 完成两圈!]
     LAP2 --> EXIT_STAIR[开启出路口识别, 切回主干道]
 ```
 
-- **第一重（航向积分）**：小车在环形楼梯内每跑一整圈，JY901P 的连续偏航角累计 $\Delta \theta$ 必经历一次完整的 $\approx 360^\circ$ 旋转；跑满两圈则累计达 $\approx 720^\circ$。
-- **第二重（里程锁死）**：测量楼梯一圈单程物理周长 $S_{\text{lap}}$。单圈计数触发必须满足实际里程 $S \in [0.85 \times S_{\text{lap}}, 1.15 \times S_{\text{lap}}]$，严防短时间内因抖动误触发第 2 圈。
-- **第三重（退出出路口动作）**：当 `Lap_Count == 2` 成立后，状态机才激活 `ENABLE_STAIR_EXIT` 标志。此时当传感器检测到右侧分岔（合流口）时，执行右打角顺滑切回主干道。
+- **航向检查**：将 JY901P 的跨 ±180° 变化展开为连续角度。每圈约 360° 是参考值，在实测允许范围内用于排除明显错误；IMU 数据无效时不能将旧角度当作新角度。
+- **相对里程窗口**：每次确认圈数后重设本圈里程基准。先实测一圈周长 `S_lap`，再按多次跑车误差标定 `[S_min, S_max]`；文中的 115 cm 和 ±20 cm 只是示例，不能直接当作实车精确值。
+- **路标去重与超窗处理**：同一次路标只计一次，必须离开路标并再次进入才允许下一圈计数。若超过扩展搜索窗口仍没有可信路标，转入待确认/安全停机并记录原因；不可无限停留在原状态，也不可直接按里程猜测已完成一圈。
+- **第三重（退出出路口动作）**：当 `Lap_Count == 2` 成立后，状态机才激活 `ENABLE_STAIR_EXIT` 标志。沿内侧支线向西到上方合流口时，检测右侧主道并右转切回；楼梯局部绕圈方向由实际走线决定，不等同于外圈顺时针方向。
 
 ---
 
@@ -168,33 +179,30 @@ stateDiagram-v2
     AVOID_IDLE --> [*]
 ```
 
-- **恒速保障机制**：避障过程中的左打角、直线平移与右切入，左右轮目标均由统一的线速度 $V_0$ 乘以转向比率解算，满足 $\frac{V_L + V_R}{2} \equiv V_0$，严防避障过程中速度下坠扣分。
 
 ---
 
 ### 4. 上方直道正弦摆动发生器 (任务 3)
 
-小车在进入上方长直道后，底盘电机叠加正弦差速调制波：
+小车在进入上方长直道后，底盘电机可在当前目标速度上叠加正弦差速调制波：
 
-$$\Delta V(t) = A \cdot \sin(2\pi f \cdot t)$$
-$$\begin{cases}
-V_{\text{Left}}(t) = V_{\text{target}} + \Delta V(t) \\
-V_{\text{Right}}(t) = V_{\text{target}} - \Delta V(t)
-\end{cases}$$
+`ΔV(t) = A × sin(2πft)`
 
-- **平均速度恒定证明**：
-  $$\frac{V_{\text{Left}} + V_{\text{Right}}}{2} = \frac{(V_{\text{target}} + \Delta V) + (V_{\text{target}} - \Delta V)}{2} = V_{\text{target}} \quad (\text{绝对恒定})$$
+- `V_Left,cmd(t) = V_base(t) + ΔV(t)`
+- `V_Right,cmd(t) = V_base(t) - ΔV(t)`
+
+- `V_base(t)` 可按循迹稳定性调整；左右轮限幅与闭环误差会使实际平均轮速变化，不将指令的对称形式当作实车恒速保证。
 - **防脱轨与状态平滑切出**：
-  - 摆幅 $A$ 与频率 $f$ 限制在循迹传感器边缘（最外侧探头刚好触碰黑色边线时限幅）；
-  - 当累计里程表明已通过长直道时，正弦发生器在 $\sin=0$ 的过零点平滑退出，无缝接入直角弯前常规巡线。
+  - 摆幅 `A` 与频率 `f` 限制在循迹传感器边缘（最外侧探头刚好触碰黑色边线时限幅）；
+  - 当累计里程表明已通过长直道时，正弦发生器在 `sin(2πft) = 0` 的过零点平滑退出，无缝接入直角弯前常规巡线。
 
 ---
 
 ### 5. 绕场一周自动停起点减速逻辑
 
-- **全程总里程监测**：赛道总周长约 $L_{\text{total}}$。小车从起点出发累计总里程达到 $0.9 \times L_{\text{total}}$ 后，进入“进站准备态”；
+- **全程总里程监测**：赛道总周长约 `L_total`。小车从起点出发累计总里程达到 `0.9 × L_total` 后，进入“进站准备态”；
 - **终点黑线检测**：灰度传感器检测到全黑线标志（`pattern_allblack`）；
-- **S型平滑减速曲线**：目标速度从 $V_{\text{target}}$ 匀减速至 0，并在平稳停靠在停起点后切入刹车保持态（`allstop()`），避免急刹冲出车位。
+- **刹车**：第二次识别到全黑时，直接切换到电机停机即可，不需要完成匀减速曲线刹停
 
 ---
 
@@ -215,10 +223,11 @@ typedef enum {
 
 /* 赛道空间导航分区 */
 typedef enum {
-    SEG_START_ACCEL = 0,     // 起点出发与加速段
+    SEG_START_DIRECT = 0,    // 起点直接下发35% PWM目标
     SEG_BEFORE_BRANCH,       // 楼梯前主道直行段 (屏蔽分支误判)
     SEG_BRANCH_DECISION,     // 楼梯分岔决策口 (进 or 绕)
     SEG_STAIR_CIRCULATION,   // 楼梯环形多圈区
+    SEG_LEFT_UP,             // 通过楼梯区域后继续上行，到左上弯才切换状态
     SEG_TOP_STRAIGHT,        // 上方长直道 (避障 or 正弦)
     SEG_APPROACH_FINAL,      // 进站预备段
     SEG_FINISH_BRAKE         // 起点平稳刹停
@@ -268,17 +277,18 @@ void Navigation_RunFSM(NavigationContext *ctx, SensorSnapshot_t *sensors)
 
         case SEG_BRANCH_DECISION:
             if (ctx->task_mode == TASK_2_STAIR_LOOP) {
-                // 任务2：识别到左分支切入楼梯
-                if (sensors->pattern == pattern_leftbranch) {
+                // 顺时针上行时右侧为楼梯入口，任务2右转切入
+                if (sensors->pattern == pattern_rightbranch) {
                     ctx->current_segment = SEG_STAIR_CIRCULATION;
                     ctx->stair_lap_count = 0;
                     ctx->stair_accum_yaw = 0.0f;
                 }
             } else {
-                // 任务1/3：锁定贴右直行通过，禁入楼梯
-                Track_ExecuteClampRightPID(TARGET_CRUISE_SPEED);
+                // 任务1/3：岔口窗口内抑制右转，沿左侧主道直行
+                Track_ExecuteClampLeftPID(TARGET_CRUISE_SPEED);
                 if (seg_distance >= DIST_CROSS_BRANCH) {
-                    ctx->current_segment = SEG_TOP_STRAIGHT;
+                    ctx->current_segment = SEG_LEFT_UP;
+                    ctx->segment_start_odometer = current_odo;
                 }
             }
             break;
@@ -286,6 +296,16 @@ void Navigation_RunFSM(NavigationContext *ctx, SensorSnapshot_t *sensors)
         case SEG_STAIR_CIRCULATION:
             // 楼梯双圈闭环执行与计数
             Stair_ExecuteDualLapLoop(ctx, sensors);
+            // 两圈后从上方合流口右转回左侧主道，再切换到 SEG_LEFT_UP
+            break;
+
+        case SEG_LEFT_UP:
+            Track_ExecuteNormalPID(TARGET_CRUISE_SPEED);
+            // 到达左上弯后才允许启动上方直道的避障或正弦动作
+            if (Track_ReachedTopStraight(ctx, current_odo)) {
+                ctx->current_segment = SEG_TOP_STRAIGHT;
+                ctx->segment_start_odometer = current_odo;
+            }
             break;
 
         case SEG_TOP_STRAIGHT:
@@ -308,6 +328,6 @@ void Navigation_RunFSM(NavigationContext *ctx, SensorSnapshot_t *sensors)
 ## 六、 总结与后续 AI 维护提示
 
 1. **绝对禁止退化**：后续修改代码时，严禁再次退回只依靠 8 路灰度引脚电平随意跳转的散装状态机。
-2. **多源数据融合**：所有关键场景跳转必须满足：
-   $$\text{状态迁移条件} = \text{赛道灰度特征} \ \mathbf{AND} \ \text{编码器里程窗口} \ \mathbf{AND} \ \text{陀螺仪航向门限}$$
-3. **恒速指标自检**：调试任何转弯、避障和正弦摆动算法时，务必通过调试串口打印 $(V_L + V_R)/2$，确保全程线速度方差最小化。
+2. **多源数据融合**：灰度路标负责事件确认；当前路段的相对里程提供搜索窗口；IMU 航向提供合理性检查。每个状态都要定义正常窗口、扩展窗口和超窗后的待确认/安全停机路径，不使用全程累计里程与航向的单点硬匹配。
+3. **速度指令自检**：通过调试串口观察发车时的 35% PWM 目标、左右轮实际编码器速度和路段状态，并检查转弯及避障时有无不必要的速度突变。
+4. **多源数据仅提供合理范围**

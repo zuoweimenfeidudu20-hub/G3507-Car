@@ -4,7 +4,7 @@
 #include "pid_motor.h"
 #include "uart.h"
 #include "key.h"
-#include "grayscale_sensor.h"
+//#include "grayscale_sensor.h"
 #include "ti_msp_dl_config.h"
 
 int main(void)
@@ -18,36 +18,36 @@ int main(void)
     NVIC_ClearPendingIRQ(pid_timer_INST_INT_IRQN);
     NVIC_EnableIRQ(pid_timer_INST_INT_IRQN);
     DL_TimerG_startCounter(pid_timer_INST);
-    keymode last_mode=key_idle;
+    //keymode last_mode=key_idle;
     while (1) 
     {
-        keyscan();
-        keymode current_mode=key_getmode();
-        if(current_mode!=last_mode){
-            condition_rst(state_line);//不同模式清0
-            last_mode=current_mode;
-        }
-        switch(current_mode){
-            case key1_putong:
+        // keyscan();
+        // keymode current_mode=key_getmode();
+        // if(current_mode!=last_mode){
+        //     condition_rst(state_line);//不同模式清0
+        //     last_mode=current_mode;
+        // }
+        // switch(current_mode){
+        //     case key1_putong:
 
-                break;
+        //         break;
             
-            case key2_teshu:
+        //     case key2_teshu:
 
-                break;
+        //         break;
 
-            case key3_baidong:
+        //     case key3_baidong:
 
-                break;
+        //         break;
             
-            case key_idle:
-                set_target(0,0);
-                break;
-            default:
-                set_target(0,0);
-                break;
-        }
-        motor_encoder_condition();
+        //     case key_idle:
+        //         set_target(0,0);
+        //         break;
+        //     default:
+        //         set_target(0,0);
+        //         break;
+        // }
+        motor_rlencoder_cnts();
         delay_ms(10);
     }
     return 0;

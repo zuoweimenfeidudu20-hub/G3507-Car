@@ -156,8 +156,8 @@ if (DL_TimerG_getPendingInterrupt(pid_timer_INST) == DL_TIMERG_IIDX_ZERO)
         left_error=left_error_count;
         right_error=right_error_count;
 
-        right_encoder_count=0;
-        left_encoder_count=0;
+        // right_encoder_count=0;
+        // left_encoder_count=0;
         left_error_count=0;
         right_error_count=0;
 

@@ -4,7 +4,7 @@
 
 ## 1. 电机编码器 4 倍频状态跃迁查表法
 
-在 [init/pid_motor.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/pid_motor.c) 中，编码器解码摒弃了繁重的浮点和复杂的 `if-else` 分支，采用微控制器高效率的 **状态转移查找表 (State Transition Look-Up Table)**：
+在 [init/pid_motor.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\pid_motor.c) 中，编码器解码摒弃了繁重的浮点和复杂的 `if-else` 分支，采用微控制器高效率的 **状态转移查找表 (State Transition Look-Up Table)**：
 
 ### 1.1 编码逻辑
 - 组合 4 位状态码：`Index = (History_AB << 2) | Current_AB`
@@ -27,7 +27,7 @@
 ### 2.1 目标值转换
 - 输入为目标占空比百分比 `-100 ~ +100`；
 - 通过 `PercentToCounts(percent)` 将其转换为 10ms 周期内的目标脉冲计数值：
-  $$\text{TargetCounts} = \frac{|\text{percent}| \times \text{max\_count\_10ms} + 50}{100}$$
+  `TargetCounts = (|percent| × max_count_10ms + 50) / 100`
   （目前定义 `max_count_10ms = 58`）。
 
 ### 2.2 PID 计算与抗饱和机制
@@ -60,19 +60,17 @@ flowchart TD
 
 ### 3.1 线性加权横向偏差解算
 灰度传感器阵列由 8 个数字探头组成，分别配置权值：
-$$W = [-3500, -2500, -1500, -500, 500, 1500, 2500, 3500]$$
+`W = [-3500, -2500, -1500, -500, 500, 1500, 2500, 3500]`
 当探头检测到黑线时值为 1，检测到白色地面时为 0。
 
 系统计算当前横向加权平均重心：
-$$\text{error} = \frac{\sum_{i=0}^{7} (W_i \times V_i)}{\sum_{i=0}^{7} V_i}$$
-- 若 $\text{error} < 0$，说明小车偏右，黑线偏左，需要向左修正；
-- 若 $\text{error} > 0$，说明小车偏左，黑线偏右，需要向右修正；
-- 若 $\sum V_i == 0$，判定为**丢线 (pattern_lost)**。
+`error = Σ(i=0…7)(W_i × V_i) / Σ(i=0…7)V_i`
+- 若 `error < 0`，说明小车偏右，黑线偏左，需要向左修正；
+- 若 `error > 0`，说明小车偏左，黑线偏右，需要向右修正；
+- 若 `ΣV_i = 0`，判定为**丢线 (pattern_lost)**。
 
 ### 3.2 差速分配逻辑
 在 [init/grayscale_sensor.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/grayscale_sensor.c) 的 `set_target(pwm, correction)` 中：
-$$\begin{cases}
-\text{Left\_Target} = \text{Clamp}(\text{base\_pwm} + \text{correction}, 0, 100) \\
-\text{Right\_Target} = \text{Clamp}(\text{base\_pwm} - \text{correction}, 0, 100)
-\end{cases}$$
+- `Left_Target = Clamp(base_pwm + correction, 0, 100)`
+- `Right_Target = Clamp(base_pwm - correction, 0, 100)`
 基准速度默认 `base_pwm = 35`，通过调整 `correction` 实现平滑差速转弯。

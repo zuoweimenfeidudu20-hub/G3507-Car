@@ -25,3 +25,11 @@ void motor_encoder_condition(void)
     UART_SendString(tx_buffer);
 }
 
+void motor_rlencoder_cnts(void)
+{
+    char tx_buffer[200];
+    snprintf(tx_buffer,sizeof(tx_buffer),
+            "%d,%d\r\n",
+            right_encoder_count,left_encoder_count);
+    UART_SendString(tx_buffer);
+}

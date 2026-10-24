@@ -2,7 +2,7 @@
 
 > **芯片型号**：TI MSPM0G3507 (LQFP-64 封装)  
 > **时钟主频**：32 MHz / 80 MHz  
-> **配置源文件**：[init.syscfg](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init.syscfg)
+> **配置源文件**：[init.syscfg](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.syscfg)
 
 ---
 

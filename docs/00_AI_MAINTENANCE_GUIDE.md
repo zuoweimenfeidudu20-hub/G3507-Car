@@ -24,7 +24,7 @@
 
 ## 2. 硬件引脚修改规范
 
-1. **唯一事实源**：项目的硬件配置由 [init.syscfg](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init.syscfg) 管理，严禁在未经 SysConfig 配置的情况下在 C 代码中私自 hardcode 寄存器地址。
+1. **唯一事实源**：项目的硬件配置由 [init.syscfg](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.syscfg) 管理，严禁在未经 SysConfig 配置的情况下在 C 代码中私自 hardcode 寄存器地址。
 2. **网表同步**：若因硬件飞线或引脚冲突修改了引脚，必须：
    - 更新 `init.syscfg`；
    - 运行构建脚本生成新的 `ti_msp_dl_config.h`；

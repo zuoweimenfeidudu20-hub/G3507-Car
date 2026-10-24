@@ -1,8 +1,8 @@
 # MSPM0G3507 智能小车工程
 
 > **[IMPORTANT] AI 协作维护总纲**：  
-> 本工程已完成模块化文档拆分。任何接手本项目的 AI（或协作者）在修改程序、调整引脚或重构代码时，**必须根据修改类型同步更新 [docs/](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/docs) 目录下对应的细分文档**！  
-> 详情请先阅读：[00 - AI 维护与协同指南](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/docs/00_AI_MAINTENANCE_GUIDE.md)。
+> 本工程已完成模块化文档拆分。任何接手本项目的 AI（或协作者）在修改程序、调整引脚或重构代码时，**必须根据修改类型同步更新 [docs/](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs) 目录下对应的细分文档**！  
+> 详情请先阅读：[00 - AI 维护与协同指南](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\00_AI_MAINTENANCE_GUIDE.md)。
 
 ---
 
@@ -10,11 +10,11 @@
 
 本项目基于 **德州仪器 TI MSPM0G3507** (ARM Cortex-M0+) 微控制器构建，实现了一台具备**双轮差速闭环驱动、8路加权灰度循迹、超声波避障、九轴IMU航向解算与按键多模式调度**的智能循迹小车。
 
-- **主控配置**：[init.syscfg](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init.syscfg) (TI SysConfig v1.26.2)
-- **编译工具链**：TI Arm Clang (`ti-cgt-armllvm`) + [scripts/build.ps1](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/scripts/build.ps1)
-- **下载与调试**：OpenOCD / CMSIS-DAP + [openocd/abrobot-mspm0g3507.cfg](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/openocd/abrobot-mspm0g3507.cfg)
-- **可视化看板**：[docs/dashboard.html](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/docs/dashboard.html)（双击在浏览器中直观查看引脚网表与控制流）
-- **核心伪代码**：[应用层状态机切换逻辑_伪代码.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/应用层状态机切换逻辑_伪代码.c)（全中文条件判断与状态机跳转逻辑骨架）
+- **主控配置**：[init.syscfg](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.syscfg) (TI SysConfig v1.26.2)
+- **编译工具链**：TI Arm Clang (`ti-cgt-armllvm`) + [scripts/build.ps1](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\scripts\build.ps1)
+- **下载与调试**：OpenOCD / CMSIS-DAP + [openocd/abrobot-mspm0g3507.cfg](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\openocd\abrobot-mspm0g3507.cfg)
+- **可视化看板**：[docs/dashboard.html](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\dashboard.html)（双击在浏览器中直观查看引脚网表与控制流）
+- **核心伪代码**：[应用层状态机切换逻辑_伪代码.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\应用层状态机切换逻辑_伪代码.c)（全中文条件判断与状态机跳转逻辑骨架）
 
 ---
 
@@ -24,13 +24,13 @@
 
 | 序号 | 文档名称 | 对应核心内容与用途 | 重点关注文件 |
 | :---: | :--- | :--- | :--- |
-| **00** | [AI 维护与协同指南](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/docs/00_AI_MAINTENANCE_GUIDE.md) | **AI 必读**：代码修改必须同步的文档映射表、中断与引脚修改铁律 | 全局规范 |
-| **01** | [硬件类网表与引脚映射](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/docs/01_HARDWARE_NETLIST.md) | 左右电机、编码器、8路灰度、按键、超声波/陀螺仪物理引脚与定时器分配 | [init.syscfg](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init.syscfg) |
-| **02** | [软件分层架构与调用流](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/docs/02_SOFTWARE_ARCHITECTURE.md) | 业务层、算法层、驱动层、HAL层四层划分图与前台中断/后台轮询时间域 | [init.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init.c) |
-| **03** | [运动闭环与控制算法](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/docs/03_CONTROL_ALGORITHMS.md) | 编码器4倍频状态机查表解码、10ms 速度环 PID、加权灰度转向环偏差解算 | [pid_motor.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/pid_motor.c) |
-| **04** | [状态机体系与场景决策](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/docs/04_STATE_MACHINES.md) | **赛题核心决策**：三层分层状态机 (HSM)、楼梯跑满2圈闭环仲裁、直道避障/正弦摆动与恒速保障 | [grayscale_sensor.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/grayscale_sensor.c) |
-| **05** | [核心 API 接口与全局符号表](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/docs/05_API_REFERENCE.md) | 所有 `.h` 头文件导出的函数接口原型、输入输出参数及关键全局变量清单 | [init/*.h](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init) |
-| **06** | [已知缺陷诊断与路线图](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/docs/06_TODO_AND_BUGS.md) | **调试必读**：GPIOA 共享中断冲突（超声波ECHO）、主循环未接通寻迹等核心隐患 | 待修复缺陷 |
+| **00** | [AI 维护与协同指南](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\00_AI_MAINTENANCE_GUIDE.md) | **AI 必读**：代码修改必须同步的文档映射表、中断与引脚修改铁律 | 全局规范 |
+| **01** | [硬件类网表与引脚映射](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\01_HARDWARE_NETLIST.md) | 左右电机、编码器、8路灰度、按键、超声波/陀螺仪物理引脚与定时器分配 | [init.syscfg](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.syscfg) |
+| **02** | [软件分层架构与调用流](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\02_SOFTWARE_ARCHITECTURE.md) | 业务层、算法层、驱动层、HAL层四层划分图与前台中断/后台轮询时间域 | [init.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.c) |
+| **03** | [运动闭环与控制算法](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\03_CONTROL_ALGORITHMS.md) | 编码器4倍频状态机查表解码、10ms 速度环 PID、加权灰度转向环偏差解算 | [pid_motor.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\pid_motor.c) |
+| **04** | [状态机体系与场景决策](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\04_STATE_MACHINES.md) | **赛题核心决策**：三层分层状态机 (HSM)、楼梯跑满2圈闭环仲裁、直道避障/正弦摆动与恒速保障 | [grayscale_sensor.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/grayscale_sensor.c) |
+| **05** | [核心 API 接口与全局符号表](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\05_API_REFERENCE.md) | 所有 `.h` 头文件导出的函数接口原型、输入输出参数及关键全局变量清单 | [init/*.h](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init) |
+| **06** | [已知缺陷诊断与路线图](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\06_TODO_AND_BUGS.md) | **调试必读**：GPIOA 共享中断冲突（超声波ECHO）、主循环未接通寻迹等核心隐患 | 待修复缺陷 |
 
 ---
 

@@ -143,7 +143,7 @@ void track_controll(void)
 
     sensor_read(sensors);
     pattern=track_analyze(sensors,&error);//分析trackpattern状态
-   
+   //通过指针传回了实际error,复写了刚刚的int error=0
     state_ticks++;
     bool maxleft=sensors[0]||sensors[1];//最左边两个任一
     bool maxright=sensors[6]||sensors[7];//同
@@ -205,6 +205,9 @@ void track_controll(void)
 
                 break;
 
+                case pattern_allblack:
+
+                break;
                 case pattern_lost:
                 //识别上一次识别情况保持上次方向，阻塞2s，若任无新识别黑线状态，停机
                     if(lost_ticks++>=200){

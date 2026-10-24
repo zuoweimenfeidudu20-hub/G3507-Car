@@ -7,7 +7,7 @@
 ## 1. 致命缺陷清单 (Critical Bugs)
 
 ### 🐛 BUG-01: GPIOA 共享中断冲突导致超声波测距瘫痪
-- **问题文件**：[init/pid_motor.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/pid_motor.c#L182)、[init/hcsr04.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/hcsr04.c#L58)
+- **问题文件**：[init/pid_motor.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\pid_motor.c)、[init/hcsr04.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\hcsr04.c)
 - **现象分析**：
   - MSPM0 的所有 GPIOA 引脚共用同一个中断向量：`GROUP1_IRQHandler`。
   - 右轮编码器（`PA15, PA16`）和左轮编码器（`PA17, PA22`）挂在 GPIOA；
@@ -40,7 +40,7 @@
 ---
 
 ### 🐛 BUG-02: `init.c` 主循环尚未接入循迹主控
-- **问题文件**：[init.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init.c#L30-L50)
+- **问题文件**：[init.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.c)
 - **现象分析**：
   - 主循环中的 `switch(current_mode)` 分支（`key1_putong`, `key2_teshu`, `key3_baidong`）目前全为空语句；
   - `track_controll()` 并没有被任何定时器或主循环周期调用，小车启动后虽然按键能切模式，但小车仅会保持 0 速度或直行，无法自动寻线。
@@ -50,7 +50,7 @@
 ---
 
 ### 🐛 BUG-03: 转向环 PID 参数未赋初值
-- **问题文件**：[init/grayscale_sensor.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/grayscale_sensor.c#L15-L25)
+- **问题文件**：[init/grayscale_sensor.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\grayscale_sensor.c)
 - **现象分析**：
   - `control` 结构的 `kp = 0, ki = 0, kd = 0`，导致 `line_pid()` 输出的 `correction` 始终为 0，即便调用了寻迹逻辑小车也不会产生差速打角。
 - **推荐修复方案**：
