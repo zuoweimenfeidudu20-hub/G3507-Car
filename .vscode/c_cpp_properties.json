@@ -3,7 +3,7 @@
   "configurations": [
     {
       "name": "windows-gcc-x64",
-      "compilerPath": "C:/msys64/ucrt64/bin/gcc.exe",
+      "compilerPath": "D:/TI/ccs/tools/compiler/ti-cgt-armllvm_5.1.1.LTS/bin/tiarmclang.exe",
       "compilerArgs": [
         "-mcpu=cortex-m0plus",
         "-mthumb",

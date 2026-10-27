@@ -46,7 +46,7 @@
 | :--- | :--- | :--- | :--- | :--- |
 | `PIN_key1` | `PB23` | GPIOB Pin 23 | 内部上拉，低电平按下，双边沿中断 | `key1_putong` (普通循迹模式) |
 | `PIN_key2` | `PB8` | GPIOB Pin 8 | 内部上拉，低电平按下，双边沿中断 | `key2_teshu` (特殊赛道/台阶模式) |
-| `PIN_key3` | `PA3` | GPIOA Pin 3 | 内部上拉，低电平按下，双边沿中断 | `key3_baidong` (摆动循线模式) |
+| `PIN_key3` | `PB3` | GPIOB Pin 3 | 内部上拉，低电平按下，双边沿中断 | `key3_baidong` (摆动循线模式) |
 | `PIN_key4` | `PB13` | GPIOB Pin 13 | 内部上拉，低电平按下，双边沿中断 | `key_idle` (急停/待机模式) |
 
 ---

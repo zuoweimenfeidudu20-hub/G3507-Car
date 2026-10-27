@@ -20,7 +20,16 @@
       "preLaunchCommands": [
         "set substitute-path bazel-out/k8-opt/bin/source C:/TI/mspm0_sdk_2_11_00_07/source"
       ],
-      "runToEntryPoint": "main",
+      "postLaunchCommands": [
+        "tbreak *main"
+      ],
+      "postRestartCommands": [
+        "tbreak *main"
+      ],
+      "postResetCommands": [
+        "tbreak *main"
+      ],
+      "runToEntryPoint": "",
       "showDevDebugOutput": "raw"
     },
     {

@@ -6,10 +6,10 @@
 //应用层
 typedef enum
 {
-    key_idle,
     key1_putong,
     key2_teshu,
     key3_baidong,
+    key4_idle,
 }keymode;
 
 typedef enum

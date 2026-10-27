@@ -69,8 +69,7 @@ graph TD
   - 任务：拉高 TRIG 引脚 10μs 发送测距声波。
 
 ### 2.2 后台任务 (主循环轮询 Background Loop in `init.c`)
-1. 模式检测：扫描或获取当前按键选定的 `current_mode`；
-2. 状态机清零：若检测到模式切换，调用 `condition_rst()` 复位寻迹状态机；
-3. 执行具体模式任务（普通循迹、特殊赛道、摆动寻迹）；
-4. 遥测回传：调用 `motor_encoder_condition()` 通过 UART0 输出电机速度与 PID 调试波形数据；
-5. 适度延时 10ms 释放 CPU。
+1. 当前主循环调用 `set_target(50,0)` 设置两轮目标值；
+2. 调用 `motor_rlencoder_cnts()`，通过 UART0（PA10 TX，115200 bps）输出左右编码器计数，格式为 `右计数,左计数\r\n`；
+3. 每次输出后延时 100ms，使串口数据约以 10 Hz 更新。串口发送位于主循环，不在 10ms PID 中断中执行；
+4. 按键模式切换和寻迹控制代码目前仍被注释，尚未在主循环执行。`motor_encoder_condition()` 详细 PID 遥测接口也尚未调用。

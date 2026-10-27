@@ -11,10 +11,10 @@ typedef struct
 }keypin;
 
 static const keypin key_pins[4] = {
-    {key_PIN_key1_PORT, key_PIN_key1_PIN},
-    {key_PIN_key2_PORT, key_PIN_key2_PIN},
-    {key_PIN_key3_PORT, key_PIN_key3_PIN},
-    {key_PIN_key4_PORT, key_PIN_key4_PIN}
+    {key_PORT, key_PIN_key1_PIN},
+    {key_PORT, key_PIN_key2_PIN},
+    {key_PORT, key_PIN_key3_PIN},
+    {key_PORT, key_PIN_key4_PIN}
 };
 
 //硬件层状态机,处理是否按下的状态
@@ -33,7 +33,7 @@ typedef struct
 }keycontrol;
 
 static keycontrol keys[4];//4个按键各自保存一个状态
-volatile keymode mode=key_idle;
+volatile keymode mode=key4_idle;
 
 //1松开，0按下
 int Key_ReadPress(keyid id)
@@ -55,7 +55,7 @@ void key_selectmode(keyid id)
     }else if(id==id3){
         mode=key3_baidong;
     }else if(id==id4){
-        mode=key_idle;
+        mode=key4_idle;
     }
 }
 

@@ -84,3 +84,17 @@
 4. [ ] **第四阶段：外设融合**
    - 修复中断后使能 HC-SR04 超声波动态测距与前向防撞刹车；
    - 读取 JY901P 航向角用于直角转弯（90° 闭环打角）。
+
+---
+
+## 3. 调试器字符集警告（已处理）
+
+- **现象**：Cortex-Debug 启动时，Arm GNU Toolchain 14.2.Rel1 所带 GDB 在执行 `-break-insert -t --function main` 时提示无法从 CP1252 转换到 UTF-32。
+- **定位**：使用同一 GDB 和 `build/init.out` 离线复现；断点仍成功建立，目标程序也已在 `main` 停止。该 GDB 的 `set host-charset` 仅接受 `auto` 和 `CP1252`，无法通过设置 UTF-8 解决。
+- **处理**：`.vscode/launch.json` 禁用扩展自动生成的函数断点，在启动、重启和复位后执行 `tbreak *main`。这仍是随符号地址变化的临时断点，不需要写死地址；离线验证无字符集警告。
+
+## 4. UART0 编码器遥测（已接入，待实机验证）
+
+- `init.syscfg` 原已配置 UART0（PA10 TX、PA11 RX，115200 bps），生成代码会在 `SYSCFG_DL_init()` 中使能该外设。
+- `init.c` 现于主循环每约 100ms 调用 `motor_rlencoder_cnts()`，恢复串口编码器计数输出。`uart.h` 先前显示为未使用，是因为调用被注释。
+- 编译已通过；仍需接线并在串口终端以 115200、8N1 验证实机输出。

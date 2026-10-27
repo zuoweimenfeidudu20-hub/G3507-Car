@@ -2,14 +2,21 @@
 #include "grayscale_sensor.h"
 #include "pid_motor.h"
 #include "motor.h"
+#include "key.h"
 
-//mission run_mode=normal;
 
 int state_ticks=0;
 int current_cnt=0;
 bool event_condition=false;
-static volatile int lost_ticks=0;
-static volatile int recover_ticks=0;
+// static volatile int lost_ticks=0;
+// static volatile int recover_ticks=0;
+
+static uint8_t cross_stage1=0;
+//static uint8_t cross_stage2=0;
+
+static volatile trackpattern current_pattern=pattern_line;
+static volatile int current_error=0;
+static volatile bool sample_ready=false;
 
 //先调ki,后调kp,kd
 track_pid control={
@@ -72,14 +79,6 @@ int track_count(int values[8])
     return count;
 }
 
-//模式1，2
-typedef enum
-{
-    normal,
-    abnormal,
-    baidong
-}mission;
-
 
 //记录路径状态，函数只能返回trackpattern的状态
 trackpattern track_analyze(int values[gray_sensor],int *error)
@@ -104,9 +103,10 @@ trackpattern track_analyze(int values[gray_sensor],int *error)
             }
         }
     }
-
-    //丢先=线追上一次线路
+    
+    //丢线追上一次线路
     if(cnt==0){
+        *error=0;
         return pattern_lost;
     }
     *error=weight_sum/cnt;
@@ -132,165 +132,245 @@ trackpattern track_analyze(int values[gray_sensor],int *error)
     return pattern_line;
 }
 
-trackstate current_state=state_line;
-void track_controll(void)
-{
-    int sensors[gray_sensor]={0};
-    int error=0;
-    int correction=0;
 
-    trackpattern pattern;
+// void track_controll(void)
+// {
+//     int sensors[gray_sensor]={0};
+//     int error=0;
+//     int correction=0;
 
-    sensor_read(sensors);
-    pattern=track_analyze(sensors,&error);//分析trackpattern状态
-   //通过指针传回了实际error,复写了刚刚的int error=0
-    state_ticks++;
-    bool maxleft=sensors[0]||sensors[1];//最左边两个任一
-    bool maxright=sensors[6]||sensors[7];//同
+//     trackpattern pattern;
+
+//     sensor_read(sensors);
+//     pattern=track_analyze(sensors,&error);//分析trackpattern状态
+//    //通过指针传回了实际error,复写了刚刚的int error=0
+//     state_ticks++;
+//     bool maxleft=sensors[0]||sensors[1];//最左边两个任一
+//     bool maxright=sensors[6]||sensors[7];//同
 
 
-    //嵌套状态，外层：小车当前执行状态
-    switch(current_state)
-    {
-        case state_line:
-        if(pattern!=pattern_lost){
-            lost_ticks=0;
-        }
+//     //嵌套状态，外层：小车当前执行状态
+//     switch(current_state)
+//     {
+//         case state_line:
+//         if(pattern!=pattern_lost){
+//             lost_ticks=0;
+//         }
 
-        if(pattern==pattern_lost){
-            recover_ticks=0;
-            if(lost_ticks++>=200){
-                condition_rst(state_stop);
-                set_target(0,0);
-            }
-            break;
-        }
-        if(lost_ticks!=0){
-            lost_ticks++;
-            if(recover_ticks++<3){
-                break;
-            }
-            lost_ticks=0;
-            recover_ticks=0;
-        }
+//         if(pattern==pattern_lost){
+//             recover_ticks=0;
+//             if(lost_ticks++>=200){
+//                 condition_rst(state_stop);
+//                 set_target(0,0);
+//             }
+//             break;
+//         }
+//         if(lost_ticks!=0){
+//             lost_ticks++;
+//             if(recover_ticks++<3){
+//                 break;
+//             }
+//             lost_ticks=0;
+//             recover_ticks=0;
+//         }
 
-        switch(pattern)
-            {
-                case pattern_line:
-                correction=line_pid(&control,error);
-                set_target(base_pwm,correction);
-                break;
+//             switch(pattern)
+//             {
+//                 case pattern_line:
+//                 correction=line_pid(&control,error);
+//                 set_target(base_pwm,correction);
+//                 break;
                 
-                case pattern_rightbranch:
-                //右边3个任意多个传感器识别到黑线
-                    correction=line_pid(&control,error);
-                    set_target(base_pwm,correction);
+//                 case pattern_rightbranch:
+//                 //右边3个任意多个传感器识别到黑线
+//                     correction=line_pid(&control,error);
+//                     set_target(base_pwm,correction);
 
-                    if(track_confirm((pattern==pattern_rightbranch),3)){
-                        condition_rst(state_c_lockright);
-                    }
-                break;
+//                     if(track_confirm((pattern==pattern_rightbranch),3)){
+//                         condition_rst(state_c_lockright);
+//                     }
+//                 break;
 
-                case pattern_leftbranch:
-                //左边3个传感器任意多个识别到黑线
-                    correction=line_pid(&control,error);
-                    set_target(base_pwm,correction);
+//                 case pattern_leftbranch:
+//                 //左边3个传感器任意多个识别到黑线
+//                     correction=line_pid(&control,error);
+//                     set_target(base_pwm,correction);
 
-                    if(track_confirm((pattern==pattern_leftbranch),3)){
-                        condition_rst(state_branch_lockleft);
-                    }
-                break;
+//                     if(track_confirm((pattern==pattern_leftbranch),3)){
+//                         condition_rst(state_branch_lockleft);
+//                     }
+//                 break;
 
-                case pattern_r90:
+//                 case pattern_r90:
 
-                break;
+//                 break;
 
-                case pattern_allblack:
+//                 case pattern_allblack:
 
-                break;
-                case pattern_lost:
-                //识别上一次识别情况保持上次方向，阻塞2s，若任无新识别黑线状态，停机
-                    if(lost_ticks++>=200){
-                        condition_rst(state_stop);
-                        set_target(0,0);
-                        recover_ticks=0;
-                        lost_ticks=0;
-                    }
-                break;
-            }
+//                 break;
+//                 case pattern_lost:
+//                 //识别上一次识别情况保持上次方向，阻塞2s，若任无新识别黑线状态，停机
+//                     if(lost_ticks++>=200){
+//                         condition_rst(state_stop);
+//                         set_target(0,0);
+//                         recover_ticks=0;
+//                         lost_ticks=0;
+//                     }
+//                 break;
+//             }
+//         break;
+//         //通过时路口直行
+//         case state_c_lockstraight1:
+//             set_target(base_pwm,0);
+//             if(track_confirm(pattern==pattern_line,3)){
+//                 condition_rst(state_line);
+//             }
+//             break;
+
+//         //锁死右转，至左侧最外两个任一识别到黑线
+//         case state_c_lockright:
+//             set_target(base_pwm,5);
+//             if(maxleft==1){
+//                 condition_rst(state_stair1);
+//             }
+//             break;
+
+//         case state_stair1:
+//             set_target(base_pwm,correction);
+//             if(track_confirm((center_bianhua(sensors)==1),2)){
+//                 condition_rst(state_teshu_lockleft1);
+//             }
+//             else if(track_confirm((pattern==pattern_leftbranch),2)){
+//                 condition_rst(state_branch_lockleft);
+//             }
+//             break;
+
+//         case state_teshu_lockleft1:
+//             set_target(base_pwm,-5);
+//             if(track_confirm((maxright==1),2)){
+//                 condition_rst(state_stair1);
+//             }
+//             break;
+
+//         case state_branch_lockleft:
+//             set_target(base_pwm,-5);
+//             if(track_confirm((maxright==1),2)){
+//                 condition_rst(state_stair2);
+//             }
+//             break;
+
+//         case state_stair2:
+//             set_target(base_pwm,correction);
+//             if(track_confirm((center_bianhua(sensors)==1),2)){
+//                 condition_rst(state_teshu_lockright2);
+//             }
+//             break;
+
+//         case state_teshu_lockright2:
+//             if(track_confirm((pattern==pattern_rightbranch),2)){
+//                 set_target(base_pwm,5);
+//                 if(maxleft==1){
+//                     condition_rst(state_f);
+//                 }
+//             }
+//             break;
+
+//         case state_f:
+//             set_target(base_pwm,correction);
+//             break;
+
+//         case state_stop:
+//             set_target(0,0);
+//             allstop();
+//             break;
+
+//         case state_fault:
+//         default: 
+//             set_target(0,0);
+//             allstop();
+//             break;
+//     }
+// }
+
+void trackcontroll(keymode mode,const grays *sample)
+{
+    switch(mode){
+        case key1_putong:
+            set_target(50,0);
+            //track_run_normal(sample->pattern,sample->error);
         break;
-        //通过时路口直行
-        case state_c_lockstraight1:
-            set_target(base_pwm,0);
-            if(track_confirm(pattern==pattern_line,3)){
-                condition_rst(state_line);
-            }
-            break;
 
-        //锁死右转，至左侧最外两个任一识别到黑线
-        case state_c_lockright:
-            set_target(base_pwm,5);
-            if(maxleft==1){
-                condition_rst(state_stair1);
-            }
-            break;
-
-        case state_stair1:
-            set_target(base_pwm,correction);
-            if(track_confirm((center_bianhua(sensors)==1),2)){
-                condition_rst(state_teshu_lockleft1);
-            }
-            else if(track_confirm((pattern==pattern_leftbranch),2)){
-                condition_rst(state_branch_lockleft);
-            }
-            break;
-
-        case state_teshu_lockleft1:
-            set_target(base_pwm,-5);
-            if(track_confirm((maxright==1),2)){
-                condition_rst(state_stair1);
-            }
-            break;
-
-        case state_branch_lockleft:
-            set_target(base_pwm,-5);
-            if(track_confirm((maxright==1),2)){
-                condition_rst(state_stair2);
-            }
-            break;
-
-        case state_stair2:
-            set_target(base_pwm,correction);
-            if(track_confirm((center_bianhua(sensors)==1),2)){
-                condition_rst(state_teshu_lockright2);
-            }
-            break;
-
-        case state_teshu_lockright2:
-            if(track_confirm((pattern==pattern_rightbranch),2)){
-                set_target(base_pwm,5);
-                if(maxleft==1){
-                    condition_rst(state_f);
-                }
-            }
-            break;
-
-        case state_f:
-            set_target(base_pwm,correction);
-            break;
-
-        case state_stop:
+        case key2_teshu:
+            //track_run_abnormal(sample->pattern,sample->error);
             set_target(0,0);
-            allstop();
-            break;
+        break;
 
-        case state_fault:
-        default: 
+        case key3_baidong:
+            //track_run_baidong(sample->pattern,sample->error);
             set_target(0,0);
-            allstop();
-            break;
+        break;
+
+        case key4_idle:
+            set_target(0,0);
+        break;
+
+        default:
+            set_target(0,0);
+        break;
     }
 }
+
+//避障基本动作右转45度，直行阻塞1s,左转90度，直行阻塞1s，持续识别黑线返回
+
+
+trackstate1 current_state1=state1_line;//已经通过函数传递error,pattern
+void track_run_normal(trackpattern pattern,int error)
+{
+    switch(current_state1){
+        case state1_line:
+            if(track_confirm(pattern_rightbranch,3)&&cross_stage1==0){
+                condition_rst1(state1_c_lockstraight1);
+            }else if(track_confirm(pattern_rightbranch,3)&&cross_stage1==1){
+                condition_rst1(state1_c_lockstraight2);
+            }else{
+                set_target(base_pwm,error);
+            }
+        break;
+        //继续灰度传感器识别，直到
+        case state1_c_lockstraight1:
+            if(track_confirm(pattern_leftbranch,3)){
+                set_target(base_pwm,0);
+            }else if(track_confirm(pattern_line,3)){
+                set_target(base_pwm,error);
+                cross_stage1++;
+            }else{
+                set_target(base_pwm,0);
+            }
+        break;
+
+        case state1_c_lockstraight2:
+            if(track_confirm(pattern_rightbranch,3)){
+                set_target(base_pwm,0);
+            }else if(track_confirm(pattern_line,3)){
+                set_target(base_pwm,error);
+                cross_stage1=0;
+            }else{
+                set_target(base_pwm,error);
+            }
+        break;
+
+        case state1_stop:
+            set_target(0,0);
+        break;
+
+        case state1_fault:
+            set_target(0,0);
+        break;
+    }
+}
+
+trackstate2 current_state2=state2_line;
+
 
 //两次状态确认进入某状态,滤波,require，（状况真假，审计n次）只返回1/0
 bool track_confirm(bool condition,int require)
@@ -317,17 +397,25 @@ bool center_bianhua(int sensors[gray_sensor])
 }
 
 //切换状态清0
-extern void condition_rst(trackstate next)
+extern void condition_rst1(trackstate1 next)
 {
-    current_state=next;
+    current_state1=next;
     state_ticks=0;
     current_cnt=0;
     event_condition=false;
 
     trackpid_rst(&control,0);
 }
+extern void condition_rst2(trackstate2 next)
+{
+    current_state2=next;
+    state_ticks=0;
+    current_cnt=0;
+    event_condition=false;//?
 
-//输出correction纠正力度大小
+    trackpid_rst(&control,0);
+}
+
 int line_pid(track_pid *pid,int error)
 {
     int err=error;
@@ -369,3 +457,39 @@ void set_target(int pwm,int correction)
 // void set_target90r()
 
 
+void track_timer_INST_IRQHandler(void)
+{
+    if (DL_TimerG_getPendingInterrupt(track_timer_INST) !=
+        DL_TIMERG_IIDX_ZERO) {
+        return;
+    }
+
+    int values[gray_sensor];
+    int error=0;
+
+    sensor_read(values);
+    trackpattern pattern=track_analyze(values, &error);
+    // 发布本次采样；不在中断里执行避障、PID状态机或串口打印
+    current_pattern=pattern;
+    current_error=error;
+    sample_ready=true;
+}
+
+bool gray_sample(grays *sample)
+{
+    if(sample==NULL){
+        return false;
+    }//没有有效值
+    //关闭灰度中断
+    NVIC_DisableIRQ(track_timer_INST_INT_IRQN);
+
+    bool ready=sample_ready;
+    if(ready){
+        sample->pattern=current_pattern;
+        sample->error=current_error;
+        sample_ready=false;
+    }
+    //恢复
+    NVIC_EnableIRQ(track_timer_INST_INT_IRQN);
+    return ready;
+}

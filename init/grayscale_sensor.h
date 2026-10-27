@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "key.h"
 
 #define gray_sensor 8
 #define black_level 1
@@ -23,22 +24,34 @@ typedef enum
     pattern_lost
 }trackpattern;
 
+typedef struct
+{
+    trackpattern pattern;
+    int error;
+}grays;
+
 //小车任务，该怎么走   1,2模式区分
 typedef enum
 {
-    state_line,//楼梯状态前/普通循迹
-    state_c_lockstraight1,//模式1：cross路口直行
-    state_c_lockstraight2,//1:第2段路程cross直行
-    state_c_lockright,//2:锁定右转
-    state_stair1,//1楼梯内部普通巡线(中间+第一次主线路返程)
-    state_teshu_lockleft1,//中间识别到白色，锁定左转直到最右边传感器识别到黑线
-    state_branch_lockleft,//识别到左边黑色延申，锁定左转直到右边传感器识别到黑线
-    state_stair2,//2楼梯线路过程中的普通循迹
-    state_teshu_lockright2,//中间识别到白色，锁定右转
-    state_f,//出楼梯---循迹结束
-    state_stop,
-    state_fault
-}trackstate;
+    state1_line,//楼梯状态前/普通循迹
+    state1_c_lockstraight1,//模式1：cross路口直行
+    state1_c_lockstraight2,//1:第2段路程cross直行
+    state1_stop,
+    state1_fault,
+}trackstate1;
+
+typedef enum
+{
+    state2_line,
+    state2_c_lockright,//2:锁定右转
+    state2_stair1,//1楼梯内部普通巡线
+    state2_teshu_lockleft1,//中间识别到白色，锁定左转直到最右边传感器识别到黑线
+    state2_branch_lockleft,//识别到左边黑色延申，锁定左转直到右边传感器识别到黑线
+    state2_stair2,//2楼梯线路过程中的普通循迹
+    state2_teshu_lockright2,//中间识别到白色，锁定右转
+    state2_stop,
+    state2_fault,
+}trackstate2;
 
 typedef struct
 {
@@ -59,11 +72,16 @@ trackpattern track_analyze(int values[gray_sensor],int *error);
 void track_controll(void);
 int line_pid(track_pid *pid,int error);
 void set_target(int pwm,int correction);
-extern void condition_rst(trackstate next);
+extern void condition_rst1(trackstate1 next);
+extern void condition_rst2(trackstate2 next);
 void trackpid_rst(track_pid *pid,int error);
 int track_count(int values[8]);
 bool track_confirm(bool condition,int require);
 bool center_bianhua(int sensors[gray_sensor]);
 
+void trackcontroll(keymode mode,const grays *sample);
+void track_run_normal(trackpattern pattern,int error);
+
+bool gray_sample(grays *sample);
 #endif 
 
