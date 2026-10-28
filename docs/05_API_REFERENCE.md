@@ -29,8 +29,8 @@
 | `left_encoder_count`  | `volatile int32_t` | 左编码器脉冲累加器 (由 GPIOA 中断更新) |
 | `right_count_10ms`    | `volatile int` | 右轮 10ms 采样周期实际脉冲数 (快照) |
 | `left_count_10ms`     | `volatile int` | 左轮 10ms 采样周期实际脉冲数 (快照) |
-| `init_rightpwm`       | `volatile int` | 当前设定的右轮基准目标百分比 (默认 35) |
-| `init_leftpwm`        | `volatile int` | 当前设定的左轮基准目标百分比 (默认 35) |
+| `init_rightpwm`       | `volatile int` | 当前设定的右轮目标百分比 (上电默认 0) |
+| `init_leftpwm`        | `volatile int` | 当前设定的左轮目标百分比 (上电默认 0) |
 
 ---
 
@@ -40,10 +40,13 @@
 | :--- | :--- |
 | `void sensor_read(int values[8])` | 读取 8 路灰度引脚电平填入数组 |
 | `trackpattern track_analyze(int values[8], int *error)` | 计算当前赛道特征与横向加权偏差值 `error` |
-| `void track_controll(void)` | 寻迹主控制函数（包含赛道状态机与差速输出） |
+| `bool gray_sample(grays *sample)` | 获取 40ms 定时器发布的新灰度样本 |
+| `void trackcontroll(keymode mode, const grays *sample)` | 根据模式和样本执行循迹或停车 |
+| `void track_run_normal(trackpattern pattern, int error)` | 按键 1 的普通循迹状态机 |
+| `void track_normal_reset(void)` | 重新进入普通循迹前重置路口阶段与状态 |
 | `int line_pid(track_pid *pid, int error)` | 转向纠偏 PID，计算差速调整量 `correction` |
 | `void set_target(int pwm, int correction)` | 设置左右轮基准速度与差速修正 |
-| `void condition_rst(trackstate next)` | 状态机重置，并指定下一个目标状态 |
+| `void condition_rst1(trackstate1 next)` | 普通循迹状态切换并清除连续确认计数 |
 | `bool track_confirm(bool condition, int require)` | 状态防抖滤波确认函数 |
 
 ---
@@ -52,8 +55,7 @@
 
 | 函数声明 | 作用描述 |
 | :--- | :--- |
-| `void keyscan(void)` | 主循环轮询式消抖扫描 |
-| `void key_tick10ms(void)` | 10ms 定时器中断驱动式消抖处理 |
+| `void key_tick1ms(void)` | 1ms 定时器中断驱动式消抖处理，连续 30 次相同电平确认状态 |
 | `keymode key_getmode(void)` | 获取当前选定的运行模式枚举 (`key1_putong`, `key2_teshu`, `key3_baidong`, `key_idle`) |
 
 ---

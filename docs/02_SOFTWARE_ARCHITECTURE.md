@@ -62,14 +62,15 @@ graph TD
   - 周期：严格 10ms。
   - 任务：禁止编码器中断进行快照读取，将 10ms 计数值与目标速度通过 PID 计算后，即刻输出新的左右轮 PWM 占空比。
 - **1ms 定时器中断 (`key_timer_INST_IRQHandler` on `TIMG7`)**：
-  - 周期：1ms（内部累加 10 次进入 10ms 消抖逻辑）。
-  - 任务：按键消抖状态机更新。
+  - 周期：1ms，每次调用 `key_tick1ms()`；连续 30 次低电平确认按下，连续 30 次高电平确认松开。
+  - 任务：按键消抖状态机更新并发布运行模式。
+- **40ms 定时器中断 (`track_timer_INST_IRQHandler` on `TIMG8`)**：
+  - 任务：读取 8 路灰度，计算线位置和路况，仅发布采样结果。
 - **100ms 超声波定时器中断 (`hcsr04_timer_INST_IRQHandler` on `TIMG6`)**：
   - 周期：100ms。
   - 任务：拉高 TRIG 引脚 10μs 发送测距声波。
 
 ### 2.2 后台任务 (主循环轮询 Background Loop in `init.c`)
-1. 当前主循环调用 `set_target(50,0)` 设置两轮目标值；
-2. 调用 `motor_rlencoder_cnts()`，通过 UART0（PA10 TX，115200 bps）输出左右编码器计数，格式为 `右计数,左计数\r\n`；
-3. 每次输出后延时 100ms，使串口数据约以 10 Hz 更新。串口发送位于主循环，不在 10ms PID 中断中执行；
-4. 按键模式切换和寻迹控制代码目前仍被注释，尚未在主循环执行。`motor_encoder_condition()` 详细 PID 遥测接口也尚未调用。
+1. 上电先将左右轮目标置零；主循环读取 `key_getmode()`，模式变化时复位循迹状态并立即将目标置零；
+2. `gray_sample()` 收到新采样后调用 `trackcontroll()`；按键 1 进入普通循迹，按键 4 回到待机且目标为零；
+3. 每 5 次灰度采样调用一次 `motor_encoder_condition()` 输出 PID 遥测，约 200ms 一次。串口发送位于主循环，不在 10ms PID 中断中执行。

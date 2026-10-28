@@ -20,7 +20,7 @@ static volatile bool sample_ready=false;
 
 //先调ki,后调kp,kd
 track_pid control={
-    .kp=0,
+    .kp=10,
     .ki=0,
     .kd=0,
 
@@ -296,8 +296,7 @@ void trackcontroll(keymode mode,const grays *sample)
 {
     switch(mode){
         case key1_putong:
-            set_target(50,0);
-            //track_run_normal(sample->pattern,sample->error);
+            track_run_normal(sample->pattern,sample->error);
         break;
 
         case key2_teshu:
@@ -324,38 +323,43 @@ void trackcontroll(keymode mode,const grays *sample)
 
 
 trackstate1 current_state1=state1_line;//已经通过函数传递error,pattern
+void track_normal_reset(void)
+{
+    cross_stage1=0;
+    condition_rst1(state1_line);
+}
+
 void track_run_normal(trackpattern pattern,int error)
 {
+    if(pattern==pattern_lost){
+        track_confirm(false,3);
+        set_target(0,0);
+        return;
+    }
+
     switch(current_state1){
         case state1_line:
-            if(track_confirm(pattern_rightbranch,3)&&cross_stage1==0){
-                condition_rst1(state1_c_lockstraight1);
-            }else if(track_confirm(pattern_rightbranch,3)&&cross_stage1==1){
-                condition_rst1(state1_c_lockstraight2);
+            if(track_confirm(pattern==pattern_rightbranch,3)){
+                condition_rst1(cross_stage1==0 ? state1_c_lockstraight1 : state1_c_lockstraight2);
+                set_target(base_pwm,0);
             }else{
-                set_target(base_pwm,error);
+                set_target(base_pwm,line_pid(&control,error));
             }
         break;
         //继续灰度传感器识别，直到
         case state1_c_lockstraight1:
-            if(track_confirm(pattern_leftbranch,3)){
-                set_target(base_pwm,0);
-            }else if(track_confirm(pattern_line,3)){
-                set_target(base_pwm,error);
-                cross_stage1++;
-            }else{
-                set_target(base_pwm,0);
+            set_target(base_pwm,0);
+            if(track_confirm(pattern==pattern_line,3)){
+                cross_stage1=1;
+                condition_rst1(state1_line);
             }
         break;
 
         case state1_c_lockstraight2:
-            if(track_confirm(pattern_rightbranch,3)){
-                set_target(base_pwm,0);
-            }else if(track_confirm(pattern_line,3)){
-                set_target(base_pwm,error);
+            set_target(base_pwm,0);
+            if(track_confirm(pattern==pattern_line,3)){
                 cross_stage1=0;
-            }else{
-                set_target(base_pwm,error);
+                condition_rst1(state1_line);
             }
         break;
 
@@ -370,7 +374,12 @@ void track_run_normal(trackpattern pattern,int error)
 }
 
 trackstate2 current_state2=state2_line;
-
+// void track_run_abnormal(trackpattern pattern,int error)
+// {
+//     switch(current_state2){
+//         case
+//     }
+// }
 
 //两次状态确认进入某状态,滤波,require，（状况真假，审计n次）只返回1/0
 bool track_confirm(bool condition,int require)

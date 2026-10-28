@@ -79,8 +79,8 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `TIMG0` | `pid_timer` | 32MHz / 8 / 4 = 1MHz | 10 ms | `pid_timer_INST_IRQHandler` | 电机速度闭环计算与 PWM 更新 |
 | `TIMG6` | `hcsr04_timer` | 32MHz / 8 / 8 = 500kHz | 100 ms | `hcsr04_timer_INST_IRQHandler`| 超声波 100ms 定周期测距触发 |
-| `TIMG7` | `key_timer` | 32MHz / 8 / 8 = 500kHz | 1 ms | `key_timer_INST_IRQHandler` | 按键状态机定时滤波消抖 (10ms) |
-| `TIMG8` | `track_timer` | 32MHz / 8 / 8 = 500kHz | 40 ms | `track_timer_INST_IRQHandler`| 寻迹状态机执行周期 (预留) |
+| `TIMG7` | `key_timer` | 32MHz / 8 / 8 = 500kHz | 1 ms | `key_timer_INST_IRQHandler` | 每 1ms 扫描按键，连续 30ms 确认按下/松开 |
+| `TIMG8` | `track_timer` | 32MHz / 8 / 8 = 500kHz | 40 ms | `track_timer_INST_IRQHandler`| 灰度采样；主循环消费采样并执行循迹状态机 |
 | `TIMA1` | `PWM_motor` | 周期 1600 | ~20 kHz | 无中断 (纯硬件PWM) | 驱动双路直流电机 |
 | `TIMA0` | `PWM_servo` | 周期 20000 | 50 Hz | 无中断 (纯硬件PWM) | 驱动双路舵机 |
 | `GPIOA` | `GPIO_MULTIPLE_GPIOA` | - | 边沿捕获 | `GROUP1_IRQHandler` | 编码器双边沿计数 (+ 超声波ECHO) |

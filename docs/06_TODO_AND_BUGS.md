@@ -39,33 +39,17 @@
 
 ---
 
-### 🐛 BUG-02: `init.c` 主循环尚未接入循迹主控
+### ✅ BUG-02: `init.c` 主循环尚未接入循迹主控（已修复，待实机验证）
 - **问题文件**：[init.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.c)
-- **现象分析**：
-  - 主循环中的 `switch(current_mode)` 分支（`key1_putong`, `key2_teshu`, `key3_baidong`）目前全为空语句；
-  - `track_controll()` 并没有被任何定时器或主循环周期调用，小车启动后虽然按键能切模式，但小车仅会保持 0 速度或直行，无法自动寻线。
-- **推荐修复方案**：
-  在 `key1_putong` 模式下周期调用 `track_controll()`，并配合 `delay_ms(10)` 或由 `TIMG8 (track_timer)` 调度。
+- **修复记录**：主循环已接入 `key_getmode()` → `gray_sample()` → `trackcontroll()`；按键 1 进入普通循迹，按键 4 将双轮目标置零。启动目标也改为 0。`TIMG8` 每 40ms 发布一次采样。
+- **待验证**：上板确认按键电平、灰度黑线电平、左右转向符号和 PID 参数。
 
 ---
 
-### 🐛 BUG-03: 转向环 PID 参数未赋初值
+### ⚠️ BUG-03: 转向环参数需要实车整定
 - **问题文件**：[init/grayscale_sensor.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\grayscale_sensor.c)
-- **现象分析**：
-  - `control` 结构的 `kp = 0, ki = 0, kd = 0`，导致 `line_pid()` 输出的 `correction` 始终为 0，即便调用了寻迹逻辑小车也不会产生差速打角。
-- **推荐修复方案**：
-  整定一套基础参数，例如先从 PD 控制开始：
-  ```c
-  track_pid control = {
-      .kp = 20,
-      .ki = 0,
-      .kd = 5,
-      .integral = 0,
-      .previous_error = 0,
-      .track_int_limit = 500,
-      .output_limit = 15
-  };
-  ```
+- **现状**：`control.kp = 10`、`output_limit = 5`，误差现已经过 `line_pid()`，不会再把 ±3500 的灰度权重直接当成 PWM 差值。
+- **待验证**：目前误差达到 50 时输出即被限制为 ±5，转向可能不足；根据实车传感器和电机响应整定增益与限幅。
 
 ---
 
@@ -75,7 +59,7 @@
    - 调试编码器脉冲回传，验证 `pid_motor` 速度闭环稳态性与超调量；
    - 验证串口遥测输出波形正常。
 2. [ ] **第二阶段：基础黑线寻迹**
-   - 接入 `track_controll()` 到主循环；
+   - 实车验证已接入的 `trackcontroll()` 主循环路径；
    - 整定转向 PID 参数（先调 P 消除静差，再调 D 抑制过弯振荡）；
    - 测试出界丢线保护（`state_stop`）。
 3. [ ] **第三阶段：复杂赛道适应**
@@ -96,5 +80,5 @@
 ## 4. UART0 编码器遥测（已接入，待实机验证）
 
 - `init.syscfg` 原已配置 UART0（PA10 TX、PA11 RX，115200 bps），生成代码会在 `SYSCFG_DL_init()` 中使能该外设。
-- `init.c` 现于主循环每约 100ms 调用 `motor_rlencoder_cnts()`，恢复串口编码器计数输出。`uart.h` 先前显示为未使用，是因为调用被注释。
+- `init.c` 现于每 5 次灰度采样（约 200ms）调用 `motor_encoder_condition()`，输出目标、实际 PWM、编码器计数与 PID 积分项。
 - 编译已通过；仍需接线并在串口终端以 115200、8N1 验证实机输出。

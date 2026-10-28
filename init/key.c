@@ -2,7 +2,7 @@
 #include "key.h"
 #include "grayscale_sensor.h"
 #include "motor.h"
-#define KEY_DEBOUNCE_TICKS (3)
+#define KEY_DEBOUNCE_TICKS (30)
 
 typedef struct
 {
@@ -48,18 +48,16 @@ int Key_ReadPress(keyid id)
 //连接应用层
 void key_selectmode(keyid id)
 {
-    if(id==id1){
-        mode=key1_putong;
-    }else if(id ==id2){
-        mode=key2_teshu;
-    }else if(id==id3){
-        mode=key3_baidong;
-    }else if(id==id4){
-        mode=key4_idle;
+    switch (id) {
+        case id1:mode=key1_putong; break;
+        case id2:mode=key2_teshu;  break;
+        case id3:mode=key3_baidong; break;
+        case id4:mode=key4_idle;   break;
+        default: break;
     }
 }
 
-void key_tick10ms()
+void key_tick1ms(void)
 {
     int i;
     for(i=0;i<4;i++){
@@ -78,23 +76,17 @@ void key_tick10ms()
                         keys[i].state=state_idle;
                         keys[i].ticks=0;
                     }
-                    else{
-                        keys[i].ticks++;
-                        if(keys[i].ticks>=30){
+                    else if(++keys[i].ticks>=KEY_DEBOUNCE_TICKS){
                             keys[i].state=state_press;
                             keys[i].ticks=0;
 
                             key_selectmode(i);
-                        }
                     }
                 break;
                 
                 case state_press:
                     if(pressed==1){
                         keys[i].state=state_release;
-                        keys[i].ticks=0;
-                    }else if(++keys[i].ticks>=2){
-                        key_selectmode(i);
                         keys[i].ticks=0;
                     }
                 break;
@@ -104,68 +96,15 @@ void key_tick10ms()
                         keys[i].state=state_press;
                         keys[i].ticks=0;
                     }
-                    else{
-                        keys[i].ticks++;
-                        if(keys[i].ticks>=30){
+                    else if(++keys[i].ticks>=KEY_DEBOUNCE_TICKS){
                             keys[i].state=state_idle;
                             keys[i].ticks=0;
-                        }
                     }
                 break;
             default:
                     keys[i].state=state_idle;
                     keys[i].ticks=0;
             break;
-        }
-    }
-}
-
-//根据当前+init
-void keyscan(void)
-{
-    for(int i=0;i<4;i++){
-        keyid id=i;
-        int press=Key_ReadPress(id);
-        switch(keys[i].state){
-            case state_idle:
-                if(press==0){
-                    keys[i].state=state_press_debounce;
-                    keys[i].ticks=1;
-                }//消抖处理
-                break;
-
-            case state_press_debounce:
-                if(press==1){
-                    keys[i].state=state_idle;
-                    keys[i].ticks=0;//误触
-                }else if(++keys[i].ticks>=3){
-                    keys[i].state=state_press;
-                    keys[i].ticks=0;
-                    key_selectmode(i);
-                }
-                break;
-
-            case state_press:
-                if(press==1){
-                    keys[i].state=state_press_debounce;
-                    keys[i].ticks=1;//第一次进入消抖
-                }
-                break;
-
-            case state_release:
-                if(press==0){
-                    keys[i].state=state_press;
-                    keys[i].ticks=0;
-                }else if(++keys[i].ticks>=3){
-                    keys[i].state=state_idle;
-                    keys[i].ticks=0;
-                }
-                break;
-
-            default:
-                keys[i].state=state_idle;
-                keys[i].ticks=0;
-                break;
         }
     }
 }
@@ -177,12 +116,8 @@ keymode key_getmode(void)
 
 void key_timer_INST_IRQHandler()
 {
-    static uint16_t ticks=0;
     if (DL_TimerG_getPendingInterrupt(key_timer_INST) ==
         DL_TIMERG_IIDX_ZERO) {
-        if(ticks++>=10){
-            ticks=0;
-            key_tick10ms();
-        }
+            key_tick1ms();
     }
 }

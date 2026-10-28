@@ -136,8 +136,8 @@ void pidmotor_rst(PIDMotor_Controller *controller)
     controller->previous_target=0;
 }
 
-volatile int init_rightpwm=35;
-volatile int init_leftpwm=35;
+volatile int init_rightpwm=0;
+volatile int init_leftpwm=0;
 
 volatile int right_output=0;
 volatile int left_output=0;

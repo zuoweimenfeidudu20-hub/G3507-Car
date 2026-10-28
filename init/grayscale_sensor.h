@@ -69,7 +69,6 @@ typedef struct
 
 void sensor_read(int values[gray_sensor]);
 trackpattern track_analyze(int values[gray_sensor],int *error);
-void track_controll(void);
 int line_pid(track_pid *pid,int error);
 void set_target(int pwm,int correction);
 extern void condition_rst1(trackstate1 next);
@@ -81,6 +80,7 @@ bool center_bianhua(int sensors[gray_sensor]);
 
 void trackcontroll(keymode mode,const grays *sample);
 void track_run_normal(trackpattern pattern,int error);
+void track_normal_reset(void);
 
 bool gray_sample(grays *sample);
 #endif 
