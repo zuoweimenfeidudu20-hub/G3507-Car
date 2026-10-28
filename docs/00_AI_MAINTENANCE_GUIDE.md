@@ -35,8 +35,9 @@
 ## 3. 中断处理规范 (MSPM0 GROUP 中断机制)
 
 MSPM0 单片机的 GPIO 中断采用分组聚合机制：
-- **`GROUP1_IRQHandler`** 聚合了 **GPIOA** 上的所有引脚中断。
-- 若有多个模块使用 GPIOA 的引脚作为外部中断（例如编码器引脚与超声波 ECHO 引脚），**严禁在不同文件中重复定义 `GROUP1_IRQHandler`**，必须在统一的中断服务入口内，通过 `DL_GPIO_getEnabledInterruptStatus(GPIOA, ...)` 读取并分发中断标志。
+- **`GROUP1_IRQHandler`** 聚合了 **GPIOA 和 GPIOB** 的引脚中断；两者共用同一 NVIC IRQ 编号。
+- 若有多个模块使用 GPIO 引脚作为外部中断（例如编码器引脚与超声波 ECHO 引脚），**严禁在不同文件中重复定义 `GROUP1_IRQHandler`**。必须在统一入口分别读取并清除各端口已使能引脚的中断标志。
+- 按键采用 5 ms 定时轮询，不需要 GPIOB 边沿中断；SysConfig 中不要使能按键引脚中断。
 
 ---
 

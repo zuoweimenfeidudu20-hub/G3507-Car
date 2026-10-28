@@ -61,10 +61,10 @@ graph TD
 - **10ms 定时器中断 (`pid_timer_INST_IRQHandler` on `TIMG0`)**：
   - 周期：严格 10ms。
   - 任务：禁止编码器中断进行快照读取，将 10ms 计数值与目标速度通过 PID 计算后，即刻输出新的左右轮 PWM 占空比。
-- **1ms 定时器中断 (`key_timer_INST_IRQHandler` on `TIMG7`)**：
-  - 周期：1ms，每次调用 `key_tick1ms()`；连续 30 次低电平确认按下，连续 30 次高电平确认松开。
+- **5ms 定时器中断 (`key_timer_INST_IRQHandler` on `TIMG7`)**：
+  - 周期：5 ms，每次调用 `key_tick1ms()`（保留原函数名）；消抖阈值为 6 次，按 30 ms 配置确认按下和松开。
   - 任务：按键消抖状态机更新并发布运行模式。
-- **40ms 定时器中断 (`track_timer_INST_IRQHandler` on `TIMG8`)**：
+- **10ms 定时器中断 (`track_timer_INST_IRQHandler` on `TIMG8`)**：
   - 任务：读取 8 路灰度，计算线位置和路况，仅发布采样结果。
 - **100ms 超声波定时器中断 (`hcsr04_timer_INST_IRQHandler` on `TIMG6`)**：
   - 周期：100ms。
@@ -72,5 +72,11 @@ graph TD
 
 ### 2.2 后台任务 (主循环轮询 Background Loop in `init.c`)
 1. 上电先将左右轮目标置零；主循环读取 `key_getmode()`，模式变化时复位循迹状态并立即将目标置零；
-2. `gray_sample()` 收到新采样后调用 `trackcontroll()`；按键 1 进入普通循迹，按键 4 回到待机且目标为零；
-3. 每 5 次灰度采样调用一次 `motor_encoder_condition()` 输出 PID 遥测，约 200ms 一次。串口发送位于主循环，不在 10ms PID 中断中执行。
+2. `gray_sample()` 收到新采样后调用 `trackcontroll()`；当前按键 1 调试分支调用 `set_target(70, 0)`，普通循迹函数暂被注释；按键 4 回到待机且目标为零；
+3. 当前调试版每次灰度采样都调用 `motor_encoder_condition()` 输出 PID 遥测，最多约每 10 ms 一次。串口发送位于主循环，不在定时器中断中执行；发送等待已设置上限。若主循环处理不及，单槽样本会被下一次采样覆盖。
+
+### 2.3 烧录与调试工具
+
+- `scripts/probe.ps1 -Action Flash` 使用 `openocd/xds110-mspm0g3507.cfg`，通过 XDS110 写入 `build/init.out`，完成校验后复位。
+- 默认的 `-Action Check` 检查 XDS110；`-Action CheckWireless` 可检查无线 DAP，`-Action CheckXds110` 为兼容写法。
+- VS Code 的 XDS110 OpenOCD 配置使用 `request: launch`，先运行构建任务，再烧录 `build/init.out` 并进入调试。

@@ -2,7 +2,7 @@
 #include "key.h"
 #include "grayscale_sensor.h"
 #include "motor.h"
-#define KEY_DEBOUNCE_TICKS (30)
+#define KEY_DEBOUNCE_TICKS (6)
 
 typedef struct
 {
@@ -52,12 +52,14 @@ void key_selectmode(keyid id)
         case id1:mode=key1_putong; break;
         case id2:mode=key2_teshu;  break;
         case id3:mode=key3_baidong; break;
-        case id4:mode=key4_idle;   break;
+        case id4:mode=key4_idle;
+            set_target(0, 0);
+            break;
         default: break;
     }
 }
 
-void key_tick1ms(void)
+void key_tick5ms(void)
 {
     int i;
     for(i=0;i<4;i++){
@@ -116,8 +118,7 @@ keymode key_getmode(void)
 
 void key_timer_INST_IRQHandler()
 {
-    if (DL_TimerG_getPendingInterrupt(key_timer_INST) ==
-        DL_TIMERG_IIDX_ZERO) {
-            key_tick1ms();
+    if (DL_TimerG_getPendingInterrupt(key_timer_INST)==DL_TIMERG_IIDX_ZERO){
+        key_tick5ms();
     }
 }

@@ -12,7 +12,7 @@
 
 - **主控配置**：[init.syscfg](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.syscfg) (TI SysConfig v1.26.2)
 - **编译工具链**：TI Arm Clang (`ti-cgt-armllvm`) + [scripts/build.ps1](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\scripts\build.ps1)
-- **下载与调试**：OpenOCD / CMSIS-DAP + [openocd/abrobot-mspm0g3507.cfg](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\openocd\abrobot-mspm0g3507.cfg)
+- **下载与调试**：TI XDS110 配合 OpenOCD 完成烧录和 VS Code 调试（`openocd/xds110-mspm0g3507.cfg`）。
 - **可视化看板**：[docs/dashboard.html](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\dashboard.html)（双击在浏览器中直观查看引脚网表与控制流）
 - **核心伪代码**：[应用层状态机切换逻辑_伪代码.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\应用层状态机切换逻辑_伪代码.c)（全中文条件判断与状态机跳转逻辑骨架）
 
@@ -44,7 +44,14 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1 -Action Build
 
 # 2. 打开 SysConfig 图形化引脚配置工具
 powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1 -Action SysConfig
+
+# 3. 使用 XDS110 烧录已编译的固件，并校验和复位
+powershell -ExecutionPolicy Bypass -File .\scripts\probe.ps1 -Action Flash
 ```
+
+VS Code 中运行 `MSPM0: Build and flash (XDS110)` 可先编译再烧录。按 F5 选择 `MSPM0G3507 - XDS110 build, flash and debug`，会先编译，再由 XDS110 烧录并进入调试，自动停在 `main()`；设置断点后可继续运行或单步检查。始终使用同一支探针。
+
+连接检查：`probe.ps1 -Action Check` 检查 XDS110；`-Action CheckWireless` 可检查无线 DAP。`-Action CheckXds110` 保留为 XDS110 检查的兼容写法。
 
 ---
 

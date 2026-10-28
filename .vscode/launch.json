@@ -2,7 +2,7 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "MSPM0G3507 - ABrobot Wireless DAP",
+      "name": "MSPM0G3507 - XDS110 build, flash and debug",
       "cwd": "${workspaceFolder}",
       "executable": "${workspaceFolder}/build/init.out",
       "request": "launch",
@@ -14,7 +14,7 @@
         "${workspaceFolder}/../mspm0-tools/openocd-new/openocd/share/openocd/scripts"
       ],
       "configFiles": [
-        "${workspaceFolder}/openocd/abrobot-mspm0g3507.cfg"
+        "${workspaceFolder}/openocd/xds110-mspm0g3507.cfg"
       ],
       "preLaunchTask": "MSPM0: Build",
       "preLaunchCommands": [

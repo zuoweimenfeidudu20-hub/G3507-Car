@@ -44,10 +44,10 @@
 
 | 键位标识 | MCU 物理引脚 | 端口外设 | 电气配置 | 映射工作模式 |
 | :--- | :--- | :--- | :--- | :--- |
-| `PIN_key1` | `PB23` | GPIOB Pin 23 | 内部上拉，低电平按下，双边沿中断 | `key1_putong` (普通循迹模式) |
-| `PIN_key2` | `PB8` | GPIOB Pin 8 | 内部上拉，低电平按下，双边沿中断 | `key2_teshu` (特殊赛道/台阶模式) |
-| `PIN_key3` | `PB3` | GPIOB Pin 3 | 内部上拉，低电平按下，双边沿中断 | `key3_baidong` (摆动循线模式) |
-| `PIN_key4` | `PB13` | GPIOB Pin 13 | 内部上拉，低电平按下，双边沿中断 | `key_idle` (急停/待机模式) |
+| `PIN_key1` | `PB23` | GPIOB Pin 23 | 内部上拉，低电平按下，5 ms 定时轮询 | `key1_putong` (普通循迹模式) |
+| `PIN_key2` | `PB8` | GPIOB Pin 8 | 内部上拉，低电平按下，5 ms 定时轮询 | `key2_teshu` (特殊赛道/台阶模式) |
+| `PIN_key3` | `PB3` | GPIOB Pin 3 | 内部上拉，低电平按下，5 ms 定时轮询 | `key3_baidong` (摆动循线模式) |
+| `PIN_key4` | `PB13` | GPIOB Pin 13 | 内部上拉，低电平按下，5 ms 定时轮询 | `key_idle` (急停/待机模式) |
 
 ---
 
@@ -79,8 +79,8 @@
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `TIMG0` | `pid_timer` | 32MHz / 8 / 4 = 1MHz | 10 ms | `pid_timer_INST_IRQHandler` | 电机速度闭环计算与 PWM 更新 |
 | `TIMG6` | `hcsr04_timer` | 32MHz / 8 / 8 = 500kHz | 100 ms | `hcsr04_timer_INST_IRQHandler`| 超声波 100ms 定周期测距触发 |
-| `TIMG7` | `key_timer` | 32MHz / 8 / 8 = 500kHz | 1 ms | `key_timer_INST_IRQHandler` | 每 1ms 扫描按键，连续 30ms 确认按下/松开 |
-| `TIMG8` | `track_timer` | 32MHz / 8 / 8 = 500kHz | 40 ms | `track_timer_INST_IRQHandler`| 灰度采样；主循环消费采样并执行循迹状态机 |
+| `TIMG7` | `key_timer` | 32MHz / 8 / 8 = 500kHz | 5 ms | `key_timer_INST_IRQHandler` | 每 5 ms 扫描按键，消抖阈值 6 次（30 ms） |
+| `TIMG8` | `track_timer` | 32MHz / 8 / 8 = 500kHz | 10 ms | `track_timer_INST_IRQHandler`| 灰度采样；主循环消费采样并执行当前模式逻辑 |
 | `TIMA1` | `PWM_motor` | 周期 1600 | ~20 kHz | 无中断 (纯硬件PWM) | 驱动双路直流电机 |
 | `TIMA0` | `PWM_servo` | 周期 20000 | 50 Hz | 无中断 (纯硬件PWM) | 驱动双路舵机 |
-| `GPIOA` | `GPIO_MULTIPLE_GPIOA` | - | 边沿捕获 | `GROUP1_IRQHandler` | 编码器双边沿计数 (+ 超声波ECHO) |
+| `GPIOA` | `GPIO_MULTIPLE_GPIOA` | - | 边沿捕获 | `GROUP1_IRQHandler` | 编码器双边沿计数及超声波 ECHO 标志处理；GPIOB 按键仅定时轮询 |

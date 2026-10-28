@@ -40,7 +40,7 @@
 | :--- | :--- |
 | `void sensor_read(int values[8])` | 读取 8 路灰度引脚电平填入数组 |
 | `trackpattern track_analyze(int values[8], int *error)` | 计算当前赛道特征与横向加权偏差值 `error` |
-| `bool gray_sample(grays *sample)` | 获取 40ms 定时器发布的新灰度样本 |
+| `bool gray_sample(grays *sample)` | 获取 10 ms 定时器发布的新灰度样本 |
 | `void trackcontroll(keymode mode, const grays *sample)` | 根据模式和样本执行循迹或停车 |
 | `void track_run_normal(trackpattern pattern, int error)` | 按键 1 的普通循迹状态机 |
 | `void track_normal_reset(void)` | 重新进入普通循迹前重置路口阶段与状态 |

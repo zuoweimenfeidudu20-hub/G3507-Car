@@ -4,10 +4,20 @@
 #include <stdio.h>
 #include <stdint.h>
 
+#define UART_TX_WAIT_LIMIT 4096U
+
+volatile uint32_t uart_tx_timeout_count = 0;
+
 void UART_SendString(const char *string)
 {
     while (*string != '\0') {
-        DL_UART_Main_transmitDataBlocking(UART_0_INST, (uint8_t)*string);
+        uint32_t tries = 0;
+        while (!DL_UART_Main_transmitDataCheck(UART_0_INST, (uint8_t)*string)) {
+            if (++tries >= UART_TX_WAIT_LIMIT) {
+                uart_tx_timeout_count++;
+                return;
+            }
+        }
         string++;
     }
 }

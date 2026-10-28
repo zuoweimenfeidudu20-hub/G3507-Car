@@ -23,7 +23,7 @@ typedef enum
 
 int Key_ReadPress(keyid id);
 void key_selectmode(keyid id);
-void key_tick1ms(void);
+void key_tick5ms(void);
 void key_init(void);
 keymode key_getmode(void);
 

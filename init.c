@@ -17,6 +17,7 @@ int main(void)
     NVIC_ClearPendingIRQ(key_timer_INST_INT_IRQN);
     NVIC_EnableIRQ(key_timer_INST_INT_IRQN);
     DL_TimerG_startCounter(key_timer_INST);
+
     NVIC_ClearPendingIRQ(GPIO_MULTIPLE_GPIOA_INT_IRQN);
     NVIC_EnableIRQ(GPIO_MULTIPLE_GPIOA_INT_IRQN);
     NVIC_ClearPendingIRQ(pid_timer_INST_INT_IRQN);
@@ -27,11 +28,11 @@ int main(void)
     NVIC_EnableIRQ(track_timer_INST_INT_IRQN);
     DL_TimerG_startCounter(track_timer_INST);
 
-    uint8_t telemetry_samples = 0;
+
     while (1)
     {
-        keymode current_mode = key_getmode();
-        if (current_mode != last_mode) {
+        keymode current_mode=key_getmode();
+        if(current_mode!=last_mode){
             track_normal_reset();
             condition_rst2(state2_line);
             set_target(0, 0);
@@ -40,10 +41,7 @@ int main(void)
 
         if (gray_sample(&sample)) {
             trackcontroll(current_mode, &sample);
-            if (++telemetry_samples >= 5) {
-                telemetry_samples = 0;
-                motor_encoder_condition();
-            }
+            motor_encoder_condition();
         }
     }
 }

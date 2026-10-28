@@ -18,14 +18,21 @@
       "presentation": {"reveal": "always", "revealProblems": "onProblem", "panel": "dedicated", "clear": true}
     },
     {
-      "label": "MSPM0: Check wireless connection",
+      "label": "MSPM0: Check XDS110 connection",
       "type": "process",
       "command": "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
       "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/probe.ps1", "-Action", "Check"],
       "problemMatcher": []
     },
     {
-      "label": "MSPM0: Build and flash",
+      "label": "MSPM0: Check wireless connection",
+      "type": "process",
+      "command": "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+      "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/probe.ps1", "-Action", "CheckWireless"],
+      "problemMatcher": []
+    },
+    {
+      "label": "MSPM0: Build and flash (XDS110)",
       "type": "process",
       "command": "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
       "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/scripts/probe.ps1", "-Action", "Flash"],

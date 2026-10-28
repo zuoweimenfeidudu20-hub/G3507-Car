@@ -20,7 +20,7 @@ static volatile bool sample_ready=false;
 
 //先调ki,后调kp,kd
 track_pid control={
-    .kp=10,
+    .kp=20,
     .ki=0,
     .kd=0,
 
@@ -296,7 +296,8 @@ void trackcontroll(keymode mode,const grays *sample)
 {
     switch(mode){
         case key1_putong:
-            track_run_normal(sample->pattern,sample->error);
+            set_target(70,0);
+            //track_run_normal(sample->pattern,sample->error);
         break;
 
         case key2_teshu:

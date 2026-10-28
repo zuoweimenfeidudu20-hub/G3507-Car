@@ -1,6 +1,7 @@
 #include "ti_msp_dl_config.h"
 #include "motor.h"
 #include "pid_motor.h"
+#include "hcsr04_internal.h"
 #include "stdio.h"
 #include "stdint.h"
 
@@ -181,6 +182,8 @@ if (DL_TimerG_getPendingInterrupt(pid_timer_INST) == DL_TIMERG_IIDX_ZERO)
 
 void GROUP1_IRQHandler(void)
 {
+    HCSR04_HandleEchoInterrupt();
+
     int right_pins = MOTOR_DIR1_CH_1_PIN | MOTOR_DIR1_CH_2_PIN;
     int left_pins = MOTOR_DIR2_CH_11_PIN | MOTOR_DIR2_CH_22_PIN;
     //读取编码器引脚是否有中断待处理 pending=0无中断
