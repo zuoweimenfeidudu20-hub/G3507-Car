@@ -23,6 +23,7 @@ int main(void)
     NVIC_ClearPendingIRQ(pid_timer_INST_INT_IRQN);
     NVIC_EnableIRQ(pid_timer_INST_INT_IRQN);
     DL_TimerG_startCounter(pid_timer_INST);
+    
     DL_TimerG_clearInterruptStatus(track_timer_INST, DL_TIMERG_INTERRUPT_ZERO_EVENT);
     NVIC_ClearPendingIRQ(track_timer_INST_INT_IRQN);
     NVIC_EnableIRQ(track_timer_INST_INT_IRQN);
@@ -41,7 +42,7 @@ int main(void)
 
         if (gray_sample(&sample)) {
             trackcontroll(current_mode, &sample);
-            motor_encoder_condition();
+            motor_rlencoder_cnts(&sample, current_mode);
         }
     }
 }

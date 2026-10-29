@@ -16,11 +16,12 @@ static uint8_t cross_stage1=0;
 
 static volatile trackpattern current_pattern=pattern_line;
 static volatile int current_error=0;
+static volatile int current_values[gray_sensor];
 static volatile bool sample_ready=false;
 
 //先调ki,后调kp,kd
 track_pid control={
-    .kp=20,
+    .kp=10,
     .ki=0,
     .kd=0,
 
@@ -28,7 +29,7 @@ track_pid control={
     .previous_error=0,
 
     .track_int_limit=500,//积分限幅
-    .output_limit=5//输出限幅
+    .output_limit=10//输出限幅
 };
 
 typedef struct {
@@ -296,8 +297,7 @@ void trackcontroll(keymode mode,const grays *sample)
 {
     switch(mode){
         case key1_putong:
-            set_target(70,0);
-            //track_run_normal(sample->pattern,sample->error);
+            track_run_normal(sample->pattern,sample->error);
         break;
 
         case key2_teshu:
@@ -482,6 +482,9 @@ void track_timer_INST_IRQHandler(void)
     // 发布本次采样；不在中断里执行避障、PID状态机或串口打印
     current_pattern=pattern;
     current_error=error;
+    for(int i=0;i<gray_sensor;i++){
+        current_values[i]=values[i];
+    }
     sample_ready=true;
 }
 
@@ -497,6 +500,9 @@ bool gray_sample(grays *sample)
     if(ready){
         sample->pattern=current_pattern;
         sample->error=current_error;
+        for(int i=0;i<gray_sensor;i++){
+            sample->values[i]=current_values[i];
+        }
         sample_ready=false;
     }
     //恢复

@@ -18,7 +18,7 @@
 
 ### ⚠️ BUG-00A: 串口遥测可能阻塞主循环（已加等待上限，待实机验证）
 
-- 主循环内的 `motor_encoder_condition()` 调用 `UART_SendString()`；原实现逐字节调用会无限等待的 `DL_UART_Main_transmitDataBlocking()`。用户当前调试版最多每次 10 ms 灰度采样都发送一次。
+- 主循环内的 `motor_rlencoder_cnts()` 调用 `UART_SendString()`；原实现逐字节调用会无限等待的 `DL_UART_Main_transmitDataBlocking()`。当前最多每次 10 ms 灰度采样都发送一次。
 - 若 UART 发送器停止出队，主循环会停在串口发送，无法读取新的按键模式；现改为每字节有限次尝试，超限即放弃本次报文，并累加 `uart_tx_timeout_count` 供调试器查看。
 - 串口停止与按键失效同时发生，但尚未确认 UART 是否为实际停机点；还需在失效时读取 CPU 状态和计数器。
 - 按键 4 的停车目标现在直接由消抖完成的按键中断下发，不再依赖主循环先从 UART 调用返回；若中断本身停摆，此保护也无法生效。
@@ -36,15 +36,15 @@
 
 ### ✅ BUG-02: `init.c` 主循环尚未接入循迹主控（已修复，待实机验证）
 - **问题文件**：[init.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.c)
-- **修复记录**：主循环已接入 `key_getmode()` → `gray_sample()` → `trackcontroll()`；当前按键 1 分支固定下发 `set_target(70, 0)`，普通循迹函数仍被注释；按键 4 将双轮目标置零。启动目标也改为 0。`TIMG8` 每 10 ms 发布一次采样。
+- **修复记录**：主循环已接入 `key_getmode()` → `gray_sample()` → `trackcontroll()`；按键 1 执行 `track_run_normal()` 进行灰度循迹，按键 4 将双轮目标置零。启动目标为 0。`TIMG8` 每 10 ms 发布一次包含 8 路读数、`pattern` 和 `error` 的采样。
 - **待验证**：上板确认按键电平、灰度黑线电平、左右转向符号和 PID 参数。
 
 ---
 
 ### ⚠️ BUG-03: 转向环参数需要实车整定
 - **问题文件**：[init/grayscale_sensor.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\grayscale_sensor.c)
-- **现状**：`control.kp = 20`、`output_limit = 5`；普通循迹函数当前未调用，恢复后误差将经过 `line_pid()`，不会把 ±3500 的灰度权重直接当成 PWM 差值。
-- **待验证**：目前误差达到 50 时输出即被限制为 ±5，转向可能不足；根据实车传感器和电机响应整定增益与限幅。
+- **现状**：`control.kp = 10`、`output_limit = 10`；按键 1 普通循迹误差经过 `line_pid()`，不会把 ±3500 的灰度权重直接当成 PWM 差值。
+- **待验证**：目前误差绝对值达到约 100 时输出即被限制为 ±10，转向可能不足；根据实车传感器和电机响应整定增益与限幅。
 
 ---
 
@@ -72,8 +72,8 @@
 - **定位**：使用同一 GDB 和 `build/init.out` 离线复现；断点仍成功建立，目标程序也已在 `main` 停止。该 GDB 的 `set host-charset` 仅接受 `auto` 和 `CP1252`，无法通过设置 UTF-8 解决。
 - **处理**：`.vscode/launch.json` 禁用扩展自动生成的函数断点，在启动、重启和复位后执行 `tbreak *main`。这仍是随符号地址变化的临时断点，不需要写死地址；离线验证无字符集警告。
 
-## 4. UART0 编码器遥测（已接入，待实机验证）
+## 4. UART0 灰度与电机遥测（已接入，待实机验证）
 
 - `init.syscfg` 原已配置 UART0（PA10 TX、PA11 RX，115200 bps），生成代码会在 `SYSCFG_DL_init()` 中使能该外设。
-- 当前调试版 `init.c` 每次获取灰度样本（最多约每 10 ms 一次）都调用 `motor_encoder_condition()`，输出目标、实际 PWM、编码器计数与 PID 积分项。主循环若被串口发送拖慢，后续灰度样本可能覆盖尚未处理的样本。
+- `init.c` 每次获取灰度样本并更新状态后（最多约每 10 ms 一次）调用 `motor_rlencoder_cnts(&sample, current_mode)`，输出同一次采样的 8 路读数、`pattern` 名称、进入的状态名称、消抖后识别出的按键模式，以及左右电机 PID 下发的 PWM 值。主循环若被串口发送拖慢，后续灰度样本可能覆盖尚未处理的样本。
 - 编译已通过；仍需接线并在串口终端以 115200、8N1 验证实机输出。

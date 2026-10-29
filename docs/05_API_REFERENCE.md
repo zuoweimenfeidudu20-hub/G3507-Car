@@ -31,6 +31,8 @@
 | `left_count_10ms`     | `volatile int` | 左轮 10ms 采样周期实际脉冲数 (快照) |
 | `init_rightpwm`       | `volatile int` | 当前设定的右轮目标百分比 (上电默认 0) |
 | `init_leftpwm`        | `volatile int` | 当前设定的左轮目标百分比 (上电默认 0) |
+| `right_output`        | `volatile int` | 右轮速度 PID 下发的有符号 PWM 百分比 |
+| `left_output`         | `volatile int` | 左轮速度 PID 下发的有符号 PWM 百分比 |
 
 ---
 
@@ -38,9 +40,9 @@
 
 | 函数声明 | 作用描述 |
 | :--- | :--- |
-| `void sensor_read(int values[8])` | 读取 8 路灰度引脚电平填入数组 |
+| `void sensor_read(int values[8])` | 读取 8 路灰度引脚，按黑线为 1、白色为 0 填入数组 |
 | `trackpattern track_analyze(int values[8], int *error)` | 计算当前赛道特征与横向加权偏差值 `error` |
-| `bool gray_sample(grays *sample)` | 获取 10 ms 定时器发布的新灰度样本 |
+| `bool gray_sample(grays *sample)` | 获取 10 ms 定时器发布的新灰度样本；`grays` 内含同一次采样的 `values[8]`、`pattern` 和 `error` |
 | `void trackcontroll(keymode mode, const grays *sample)` | 根据模式和样本执行循迹或停车 |
 | `void track_run_normal(trackpattern pattern, int error)` | 按键 1 的普通循迹状态机 |
 | `void track_normal_reset(void)` | 重新进入普通循迹前重置路口阶段与状态 |
@@ -49,9 +51,18 @@
 | `void condition_rst1(trackstate1 next)` | 普通循迹状态切换并清除连续确认计数 |
 | `bool track_confirm(bool condition, int require)` | 状态防抖滤波确认函数 |
 
+`grays.values[0]`～`values[7]` 依次对应车体从左到右的 GRAY1～GRAY8；`current_state1` 和 `current_state2` 分别表示按键 1、按键 2 的当前状态。
+
+## 4. 串口遥测模块 (`init/uart.h`)
+
+| 函数声明 | 作用描述 |
+| :--- | :--- |
+| `void motor_rlencoder_cnts(const grays *sample, keymode mode)` | 输出灰度 8 路读数、`pattern` 名称、当前状态、消抖后识别出的按键模式（`key=key1_putong` 等）和左右电机 PID PWM 值；按键 3/4 的状态打印 `inactive` |
+| `void UART_SendString(const char *string)` | 通过 UART0 发送字符串，超时即停止本次发送 |
+
 ---
 
-## 4. 按键模块 ([init/key.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\key.c))
+## 5. 按键模块 ([init/key.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\key.c))
 
 | 函数声明 | 作用描述 |
 | :--- | :--- |
@@ -60,7 +71,7 @@
 
 ---
 
-## 5. 扩展传感器接口
+## 6. 扩展传感器接口
 - **超声波** ([init/hcsr04.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\hcsr04.h))：
   - `void HCSR04_Init(void)`：启动 100ms 自动测距。
   - `float HCSR04_GetDistance(void)`：获取最近有效距离（厘米）。

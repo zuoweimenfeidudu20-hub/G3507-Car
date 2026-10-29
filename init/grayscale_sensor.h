@@ -28,6 +28,7 @@ typedef struct
 {
     trackpattern pattern;
     int error;
+    int values[gray_sensor];
 }grays;
 
 //小车任务，该怎么走   1,2模式区分
@@ -52,6 +53,9 @@ typedef enum
     state2_stop,
     state2_fault,
 }trackstate2;
+
+extern trackstate1 current_state1;
+extern trackstate2 current_state2;
 
 typedef struct
 {
