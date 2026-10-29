@@ -23,14 +23,10 @@
 - 串口停止与按键失效同时发生，但尚未确认 UART 是否为实际停机点；还需在失效时读取 CPU 状态和计数器。
 - 按键 4 的停车目标现在直接由消抖完成的按键中断下发，不再依赖主循环先从 UART 调用返回；若中断本身停摆，此保护也无法生效。
 
-### ⚠️ BUG-01: GPIOA 共享中断已接入 ECHO，测距流程仍待完成
-- **问题文件**：[init/pid_motor.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\pid_motor.c)、[init/hcsr04.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\hcsr04.c)
-- **现象分析**：
-  - MSPM0 的所有 GPIOA 引脚共用同一个中断向量：`GROUP1_IRQHandler`。
-  - 右轮编码器（`PA15, PA16`）和左轮编码器（`PA17, PA22`）挂在 GPIOA；
-  - 超声波测距的 `ECHO` 引脚同样挂在 GPIOA 的 `PA1`；
-  - `pid_motor.c` 的 `GROUP1_IRQHandler` 现已调用 `HCSR04_HandleEchoInterrupt()`，先清除 ECHO 中断标志，再处理编码器引脚，避免共享 IRQ 被未清理的 ECHO 标志反复触发。
-  - 测距流程尚未完成：`hcsr04.c` 的 `s_enabled` 未设为 1，周期定时中断也未安排下一次触发；此修复只保证共享中断能正常退出，不代表超声波测距已可用。
+### ✅ BUG-01: 未完成的 ECHO 中断与编码器共用 GPIOA（已停用超声波配置）
+- **处理记录**：`init.syscfg` 已删除超声波 GPIO 配置（原 `ECHO PA1`、`TRIG PB14`）和 `TIMG6` 周期定时器配置。`pid_motor.c` 的 `GROUP1_IRQHandler` 不再调用 `HCSR04_HandleEchoInterrupt()`，只处理当前配置的编码器引脚。
+- `hcsr04.c` 仍在构建文件列表中，但只有 SysConfig 同时生成 ECHO、TRIG 和定时器宏时才编译测距实现；当前固件不包含超声波测距函数或中断处理函数。超声波避障当前不可用。
+- **待验证**：上板观察编码器计数和按键切换是否仍出现中断卡住；此前故障尚未确认仅由 ECHO 引起。
 
 ---
 
@@ -61,7 +57,7 @@
    - 调优 Y/T 型分支路况识别状态机（`pattern_rightbranch`, `pattern_leftbranch`）；
    - 验证台阶/特殊路段跳变判断（`center_bianhua`）。
 4. [ ] **第四阶段：外设融合**
-   - 修复中断后使能 HC-SR04 超声波动态测距与前向防撞刹车；
+   - 如需恢复 HC-SR04，重新设计引脚、定时器与共享中断分发，完成测距状态机后再接入前向防撞刹车；
    - 读取 JY901P 航向角用于直角转弯（90° 闭环打角）。
 
 ---

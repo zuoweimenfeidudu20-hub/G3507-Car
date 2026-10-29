@@ -54,9 +54,7 @@
 ## 4. 辅助传感器与通信网表 (Sensors & Interfaces)
 
 ### 4.1 HC-SR04 超声波测距
-- **`HCSR04_TRIG`**：`PB14`，GPIO 输出，输出 10μs 高电平触发测距。
-- **`HCSR04_ECHO`**：`PA1`，GPIO 输入，配置双边沿中断，测量回响高电平脉宽。
-- **相关定时器**：`TIMG6` (`hcsr04_timer`)，预分频 8/8 (500kHz)，周期 100ms。
+当前 `init.syscfg` 已删除 HC-SR04 的 GPIO 和定时器配置。原 `TRIG` (`PB14`)、`ECHO` (`PA1`) 与 `TIMG6` (`hcsr04_timer`) 均未分配给超声波；固件不配置 ECHO 边沿中断，也不执行周期测距。`hcsr04.c/.h` 仅保留为后续开发源码。
 
 ### 4.2 JY901P 航姿参考系统 (IMU)
 - **`UART1_RX`**：`PA18`，接模块 TX，9600 bps，8N1，中断接收姿态角数据包。
@@ -78,9 +76,8 @@
 | 定时器实例 | SysConfig 别名 | 分频与主频 | 设定周期 | 中断服务函数 | 负责任务 |
 | :--- | :--- | :--- | :--- | :--- | :--- |
 | `TIMG0` | `pid_timer` | 32MHz / 8 / 4 = 1MHz | 10 ms | `pid_timer_INST_IRQHandler` | 电机速度闭环计算与 PWM 更新 |
-| `TIMG6` | `hcsr04_timer` | 32MHz / 8 / 8 = 500kHz | 100 ms | `hcsr04_timer_INST_IRQHandler`| 超声波 100ms 定周期测距触发 |
 | `TIMG7` | `key_timer` | 32MHz / 8 / 8 = 500kHz | 5 ms | `key_timer_INST_IRQHandler` | 每 5 ms 扫描按键，消抖阈值 6 次（30 ms） |
 | `TIMG8` | `track_timer` | 32MHz / 8 / 8 = 500kHz | 10 ms | `track_timer_INST_IRQHandler`| 灰度采样；主循环消费采样并执行当前模式逻辑 |
 | `TIMA1` | `PWM_motor` | 周期 1600 | ~20 kHz | 无中断 (纯硬件PWM) | 驱动双路直流电机 |
 | `TIMA0` | `PWM_servo` | 周期 20000 | 50 Hz | 无中断 (纯硬件PWM) | 驱动双路舵机 |
-| `GPIOA` | `GPIO_MULTIPLE_GPIOA` | - | 边沿捕获 | `GROUP1_IRQHandler` | 编码器双边沿计数及超声波 ECHO 标志处理；GPIOB 按键仅定时轮询 |
+| `GPIOA` | `GPIO_MULTIPLE_GPIOA` | - | 边沿捕获 | `GROUP1_IRQHandler` | 编码器双边沿计数；GPIOB 按键仅定时轮询 |

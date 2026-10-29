@@ -176,7 +176,7 @@ flowchart LR
 
 ### 3. 上方直道避障动作状态机 (任务 1)
 
-超声波（HC-SR04）以 100ms 周期检测前方距离：
+以下为尚未实现的避障设计方案。当前 SysConfig 已删除 HC-SR04 的引脚和 `TIMG6` 配置，固件不会以 100 ms 周期检测前方距离：
 
 ```mermaid
 stateDiagram-v2

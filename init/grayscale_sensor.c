@@ -29,7 +29,7 @@ track_pid control={
     .previous_error=0,
 
     .track_int_limit=500,//积分限幅
-    .output_limit=10//输出限幅
+    .output_limit=15//输出限幅
 };
 
 typedef struct {

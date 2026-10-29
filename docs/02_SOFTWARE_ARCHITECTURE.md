@@ -22,7 +22,6 @@ graph TD
     subgraph Layer2["第 2 层：设备与传感器驱动层 (Device Drivers)"]
         DRV_MOTOR["motor.c : PWM/方向输出控制"]
         DRV_GRAY["grayscale_sensor.c : 8路灰度引脚读取"]
-        DRV_US["hcsr04.c : 超声波定时测距"]
         DRV_IMU["JY901P.c : 串口帧解析与偏航角解算"]
         DRV_UART["uart.c : 遥测与调试串口通信"]
     end
@@ -37,16 +36,16 @@ graph TD
     LINE_PID -->|计算差速修正 correction| MOTOR_PID
     MOTOR_PID --> DRV_MOTOR
     TRACK_FSM --> DRV_GRAY
-    MAIN -.-> DRV_US
     MAIN -.-> DRV_IMU
     MAIN --> DRV_UART
 
     DRV_MOTOR --> HAL
     DRV_GRAY --> HAL
-    DRV_US --> HAL
     DRV_IMU --> HAL
     DRV_UART --> HAL
 ```
+
+`hcsr04.c/.h` 保留在源码树中。当前 SysConfig 未配置超声波引脚和定时器，`hcsr04.c` 的测距实现被条件编译排除，因此不属于当前运行路径。
 
 ---
 
@@ -66,9 +65,6 @@ graph TD
   - 任务：按键消抖状态机更新并发布运行模式。
 - **10ms 定时器中断 (`track_timer_INST_IRQHandler` on `TIMG8`)**：
   - 任务：按从左到右的 GRAY1～GRAY8 顺序读取 8 路灰度，计算线位置和路况；将归一化读数（黑线为 1）、`pattern` 和 `error` 作为同一次采样发布。
-- **100ms 超声波定时器中断 (`hcsr04_timer_INST_IRQHandler` on `TIMG6`)**：
-  - 周期：100ms。
-  - 任务：拉高 TRIG 引脚 10μs 发送测距声波。
 
 ### 2.2 后台任务 (主循环轮询 Background Loop in `init.c`)
 1. 上电先将左右轮目标置零；主循环读取 `key_getmode()`，模式变化时复位循迹状态并立即将目标置零；

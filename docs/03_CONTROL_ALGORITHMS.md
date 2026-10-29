@@ -4,7 +4,7 @@
 
 ## 1. 电机编码器 4 倍频状态跃迁查表法
 
-`GROUP1_IRQHandler` 在处理编码器引脚前调用超声波 ECHO 的中断入口，以清除同组 GPIOA 的 ECHO 中断标志，避免未处理的边沿反复触发共享中断。编码器的查表计数逻辑保持不变。
+`GROUP1_IRQHandler` 处理已配置的 GPIOA 编码器边沿中断。当前 SysConfig 已删除超声波 ECHO 引脚配置，入口不再调用超声波中断钩子；编码器的查表计数逻辑保持不变。
 
 在 [init/pid_motor.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\pid_motor.c) 中，编码器解码摒弃了繁重的浮点和复杂的 `if-else` 分支，采用微控制器高效率的 **状态转移查找表 (State Transition Look-Up Table)**：
 

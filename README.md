@@ -8,7 +8,7 @@
 
 ## 一、 项目概览
 
-本项目基于 **德州仪器 TI MSPM0G3507** (ARM Cortex-M0+) 微控制器构建，实现了一台具备**双轮差速闭环驱动、8路加权灰度循迹、超声波避障、九轴IMU航向解算与按键多模式调度**的智能循迹小车。
+本项目基于 **德州仪器 TI MSPM0G3507** (ARM Cortex-M0+) 微控制器构建，实现了一台具备**双轮差速闭环驱动、8路加权灰度循迹、九轴IMU航向解算与按键多模式调度**的智能循迹小车。超声波避障目前为待实现功能，SysConfig 中已删除其引脚与定时器配置。
 
 - **主控配置**：[init.syscfg](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.syscfg) (TI SysConfig v1.26.2)
 - **编译工具链**：TI Arm Clang (`ti-cgt-armllvm`) + [scripts/build.ps1](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\scripts\build.ps1)
@@ -25,12 +25,12 @@
 | 序号 | 文档名称 | 对应核心内容与用途 | 重点关注文件 |
 | :---: | :--- | :--- | :--- |
 | **00** | [AI 维护与协同指南](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\00_AI_MAINTENANCE_GUIDE.md) | **AI 必读**：代码修改必须同步的文档映射表、中断与引脚修改铁律 | 全局规范 |
-| **01** | [硬件类网表与引脚映射](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\01_HARDWARE_NETLIST.md) | 左右电机、编码器、8路灰度、按键、超声波/陀螺仪物理引脚与定时器分配 | [init.syscfg](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.syscfg) |
+| **01** | [硬件类网表与引脚映射](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\01_HARDWARE_NETLIST.md) | 左右电机、编码器、8路灰度、按键、陀螺仪物理引脚与定时器分配；超声波配置已删除 | [init.syscfg](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.syscfg) |
 | **02** | [软件分层架构与调用流](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\02_SOFTWARE_ARCHITECTURE.md) | 业务层、算法层、驱动层、HAL层四层划分图与前台中断/后台轮询时间域 | [init.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init.c) |
 | **03** | [运动闭环与控制算法](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\03_CONTROL_ALGORITHMS.md) | 编码器4倍频状态机查表解码、10ms 速度环 PID、加权灰度转向环偏差解算 | [pid_motor.c](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\pid_motor.c) |
 | **04** | [状态机体系与场景决策](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\04_STATE_MACHINES.md) | **赛题核心决策**：三层分层状态机 (HSM)、楼梯跑满2圈闭环仲裁、直道避障/正弦摆动与恒速保障 | [grayscale_sensor.c](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init/grayscale_sensor.c) |
 | **05** | [核心 API 接口与全局符号表](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\05_API_REFERENCE.md) | 所有 `.h` 头文件导出的函数接口原型、输入输出参数及关键全局变量清单 | [init/*.h](file:///c:/Users/34118/Desktop/WorkSpace/G3507-Car/init) |
-| **06** | [已知缺陷诊断与路线图](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\06_TODO_AND_BUGS.md) | **调试必读**：GPIOA 共享中断冲突（超声波ECHO）、主循环未接通寻迹等核心隐患 | 待修复缺陷 |
+| **06** | [已知缺陷诊断与路线图](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\docs\06_TODO_AND_BUGS.md) | **调试必读**：GPIOA 共享中断排查、已修复缺陷与后续任务 | 待修复缺陷 |
 
 ---
 
@@ -79,8 +79,8 @@ G3507-Car/
 │   ├── key.c / .h                 # 按键状态机消抖与模式切换
 │   ├── uart.c / .h                # 调试串口遥测与数据打包
 │   ├── JY901P.c / .h              # 九轴陀螺仪串口数据接收与偏航角解算
-│   ├── hcsr04.c / .h              # 超声波测距定时触发与脉宽捕获
-│   ├── hcsr04_internal.h          # 超声波中断内部钩子声明
+│   ├── hcsr04.c / .h              # 保留的超声波源码；当前配置下实现不参与固件
+│   ├── hcsr04_internal.h          # 保留的超声波中断内部钩子声明
 │   └── delay.c / .h               # 延时函数
 └── scripts/                       # 编译构建与调试探针脚本
 ```

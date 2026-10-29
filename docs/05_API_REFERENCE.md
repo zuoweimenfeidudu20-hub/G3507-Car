@@ -72,10 +72,7 @@
 ---
 
 ## 6. 扩展传感器接口
-- **超声波** ([init/hcsr04.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\hcsr04.h))：
-  - `void HCSR04_Init(void)`：启动 100ms 自动测距。
-  - `float HCSR04_GetDistance(void)`：获取最近有效距离（厘米）。
-  - `void HCSR04_HandleEchoInterrupt(void)`：ECHO 引脚捕获回调（在 [init/hcsr04_internal.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\hcsr04_internal.h) 声明）。
+- **超声波（当前不可用）** ([init/hcsr04.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\hcsr04.h))：头文件仍声明 `HCSR04_Init()`、`HCSR04_GetDistance()`，内部头文件仍声明 `HCSR04_HandleEchoInterrupt()`。当前 SysConfig 不生成超声波引脚及定时器宏，`hcsr04.c` 的实现被条件编译排除，固件中没有这些函数的定义；当前代码不能调用这些接口。
 - **九轴陀螺仪** ([init/JY901P.h](file:///C:\Users\34031\Desktop\mpsm0\outputs\MSPM0G3507-second_process\init\JY901P.h))：
   - `void JY901P_Init(void)`：初始化串口通信。
   - `bool JY901P_GetYaw(float *yaw_degrees)`：非阻塞读取航向偏航角（-180° ~ +180°）。

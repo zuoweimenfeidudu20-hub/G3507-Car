@@ -1,6 +1,10 @@
 #include "hcsr04.h"
 #include "ti_msp_dl_config.h"
 
+/* Build this driver only when its pins and timer are configured in SysConfig. */
+#if defined(HCSR04_ECHO_PIN) && defined(HCSR04_TRIG_PIN) && \
+    defined(hcsr04_timer_INST)
+
 /* 32 MHz / 8 / 8 = 500 kHz: 29 ticks per cm (58 us per cm). */
 #if hcsr04_timer_INST_LOAD_VALUE != 49999U
 #error "HCSR04 requires TIMG6 at 500 kHz with a 100 ms period"
@@ -85,3 +89,5 @@ void hcsr04_timer_INST_IRQHandler(void)
         
     }
 }
+
+#endif

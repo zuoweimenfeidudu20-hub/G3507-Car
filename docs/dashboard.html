@@ -116,13 +116,11 @@
           <div class="p-5 rounded-xl border border-purple-200 bg-purple-50/40 hover:shadow-md transition-shadow">
             <div class="flex items-center justify-between mb-2">
               <span class="font-bold text-sm text-purple-800">HC-SR04 超声波测距</span>
-              <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-semibold">TIMG6 (100ms)</span>
+              <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-semibold">当前未配置</span>
             </div>
             <ul class="text-xs space-y-1.5 text-slate-600">
-              <li><b class="text-slate-800">TRIG 脉冲引脚:</b> PB14 (10us 高脉冲)</li>
-              <li><b class="text-slate-800">ECHO 捕获引脚:</b> PA1 (双边沿中断)</li>
-              <li><b class="text-slate-800">计时精度:</b> 500 kHz (29 ticks/cm)</li>
-              <li class="text-amber-700 font-semibold">⚠️ 需在 GROUP1_IRQHandler 中分发 ECHO 中断</li>
+              <li>SysConfig 已删除原 TRIG、ECHO 和 TIMG6 配置。</li>
+              <li>测距实现被条件编译排除，当前固件不执行超声波测距。</li>
             </ul>
           </div>
 
@@ -185,10 +183,10 @@
           <div class="p-4 rounded-xl border border-emerald-200 bg-emerald-50/50">
             <div class="flex items-center justify-between">
               <span class="font-bold text-sm text-emerald-800">第 2 层：设备与传感器驱动层 (Device Drivers)</span>
-              <code class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">motor.c, JY901P.c, hcsr04.c, uart.c</code>
+              <code class="text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 font-semibold">motor.c, JY901P.c, uart.c</code>
             </div>
             <p class="text-xs text-slate-600 mt-1.5">
-              封装具体硬件行为：电机正反转及 PWM 占空比钳位输出、超声波测距定时触发与脉宽换算、JY901P 串口协议校验解包、遥测串口帧打包。
+              封装具体硬件行为：电机正反转及 PWM 占空比钳位输出、JY901P 串口协议校验解包、遥测串口帧打包。超声波源码保留但当前未启用。
             </p>
           </div>
 
