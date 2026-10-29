@@ -4,8 +4,8 @@
 #include "stdio.h"
 #include "stdint.h"
 
-volatile int32_t right_encoder_count = 0;
-volatile int32_t left_encoder_count = 0;
+volatile extern int32_t right_encoder_count = 0;
+volatile extern int32_t left_encoder_count = 0;
 volatile int right_error_count = 0;
 volatile int left_error_count = 0;
 volatile int right_count_10ms = 0;
@@ -156,8 +156,8 @@ if (DL_TimerG_getPendingInterrupt(pid_timer_INST) == DL_TIMERG_IIDX_ZERO)
         left_error=left_error_count;
         right_error=right_error_count;
 
-        right_encoder_count=0;
-        left_encoder_count=0;
+        // right_encoder_count=0;
+        // left_encoder_count=0;
         left_error_count=0;
         right_error_count=0;
 

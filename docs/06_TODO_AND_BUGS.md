@@ -8,7 +8,7 @@
 
 ### 调试连接约定
 
-烧录脚本默认使用 TI XDS110，VS Code 的 F5 配置也通过 XDS110 构建、烧录和调试。OpenOCD 已识别 XDS110（USB VID/PID `0451:bef3`，固件 `3.0.0.43`）；`probe.ps1 -Action Check` 成功读取目标 SWD DPIDR `0x6ba02477` 并识别 MSPM0G3507 Cortex-M0+。`probe.ps1 -Action Flash` 已在实机完成写入、校验和复位。通过同一 OpenOCD 服务连接 GDB，已成功下载 `build/init.out`、读取 PC/SP、设置临时断点并停在 `main()`。VS Code 的 F5 图形界面尚未直接操作验证。初次连接曾短暂出现 `Error connecting DP: cannot read IDR`，随后多次重试成功。
+烧录脚本默认使用 TI XDS110。VS Code 提供 `attach (no flash)` 和显式的 `build, flash and debug` 两个 F5 配置；前者只连接当前固件，不构建或下载，后者构建并烧录。此前 OpenOCD 已识别 XDS110（USB VID/PID `0451:bef3`，固件 `3.0.0.43`）；`probe.ps1 -Action Check` 成功读取目标 SWD DPIDR `0x6ba02477` 并识别 MSPM0G3507 Cortex-M0+。`probe.ps1 -Action Flash` 此前已在实机完成写入、校验和复位。2026-10-30 截图显示 VS Code 已进入图形调试会话；同日离线排查时 XDS110 连接检查返回 `XDS110: failed to connect`，所以本轮没有对芯片执行调试或烧录操作。
 
 ### ✅ BUG-00: 按键 GPIOB 中断与轮询并存（已修复，待实机验证）
 
@@ -62,11 +62,13 @@
 
 ---
 
-## 3. 调试器字符集警告（已处理）
+## 3. 调试器字符集与硬件断点资源（配置已调整，待实机验证）
 
 - **现象**：Cortex-Debug 启动时，Arm GNU Toolchain 14.2.Rel1 所带 GDB 在执行 `-break-insert -t --function main` 时提示无法从 CP1252 转换到 UTF-32。
 - **定位**：使用同一 GDB 和 `build/init.out` 离线复现；断点仍成功建立，目标程序也已在 `main` 停止。该 GDB 的 `set host-charset` 仅接受 `auto` 和 `CP1252`，无法通过设置 UTF-8 解决。
-- **处理**：`.vscode/launch.json` 禁用扩展自动生成的函数断点，在启动、重启和复位后执行 `tbreak *main`。这仍是随符号地址变化的临时断点，不需要写死地址；离线验证无字符集警告。
+- **原处理与新问题**：原配置禁用了扩展自动生成的函数断点，但在启动、重启和复位后执行 `tbreak *main`。2026-10-30 的调试截图显示 4 个启用的人工源码断点；启动时再加 `main` 临时断点，可能需要 5 个硬件断点，而 MSPM0G3507 最多只有 4 个。GDB 报告 `Cannot insert hardware breakpoint`，随后 Cortex-Debug 报内部错误。
+- **本轮处理**：两个 VS Code 配置都不再自动设置 `main` 临时断点，保留 `runToEntryPoint: ""`。新增 `request: attach` 配置用于只连接当前固件，不构建或下载。逐过程调试可能需要临时断点，建议最多同时启用 3 个人工断点。
+- **界限**：截图停在 `key_getmode()` 的正常入口 `0x1e20`，而 `HardFault_Handler` 在 `0x1812`；单凭编辑器的“exception”字样不能认定 `key.c` 发生 HardFault。由于本轮 XDS110 未连通，修复只完成静态验证，尚待实机确认。
 
 ## 4. UART0 灰度与电机遥测（已接入，待实机验证）
 

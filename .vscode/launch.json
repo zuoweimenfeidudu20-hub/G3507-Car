@@ -2,6 +2,26 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "MSPM0G3507 - XDS110 attach (no flash)",
+      "cwd": "${workspaceFolder}",
+      "executable": "${workspaceFolder}/build/init.out",
+      "request": "attach",
+      "type": "cortex-debug",
+      "servertype": "openocd",
+      "serverpath": "${workspaceFolder}/../mspm0-tools/openocd-new/openocd/bin/openocd.exe",
+      "armToolchainPath": "${workspaceFolder}/../mspm0-tools/arm-none-eabi-gdb/arm-none-eabi-gdb_14.2.rel1",
+      "searchDir": [
+        "${workspaceFolder}/../mspm0-tools/openocd-new/openocd/share/openocd/scripts"
+      ],
+      "configFiles": [
+        "${workspaceFolder}/openocd/xds110-mspm0g3507.cfg"
+      ],
+      "preAttachCommands": [
+        "set substitute-path bazel-out/k8-opt/bin/source C:/TI/mspm0_sdk_2_11_00_07/source"
+      ],
+      "showDevDebugOutput": "raw"
+    },
+    {
       "name": "MSPM0G3507 - XDS110 build, flash and debug",
       "cwd": "${workspaceFolder}",
       "executable": "${workspaceFolder}/build/init.out",
@@ -19,15 +39,6 @@
       "preLaunchTask": "MSPM0: Build",
       "preLaunchCommands": [
         "set substitute-path bazel-out/k8-opt/bin/source C:/TI/mspm0_sdk_2_11_00_07/source"
-      ],
-      "postLaunchCommands": [
-        "tbreak *main"
-      ],
-      "postRestartCommands": [
-        "tbreak *main"
-      ],
-      "postResetCommands": [
-        "tbreak *main"
       ],
       "runToEntryPoint": "",
       "showDevDebugOutput": "raw"

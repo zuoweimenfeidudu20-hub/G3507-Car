@@ -49,7 +49,7 @@ powershell -ExecutionPolicy Bypass -File .\scripts\build.ps1 -Action SysConfig
 powershell -ExecutionPolicy Bypass -File .\scripts\probe.ps1 -Action Flash
 ```
 
-VS Code 中运行 `MSPM0: Build and flash (XDS110)` 可先编译再烧录。按 F5 选择 `MSPM0G3507 - XDS110 build, flash and debug`，会先编译，再由 XDS110 烧录并进入调试，自动停在 `main()`；设置断点后可继续运行或单步检查。始终使用同一支探针。
+只调试芯片上已有的固件时，按 F5 选择 `MSPM0G3507 - XDS110 attach (no flash)`；此配置不构建、不下载固件，只加载 `build/init.out` 的调试符号，因此该文件须与芯片上运行的固件一致。需要更新固件时，才选择 `MSPM0G3507 - XDS110 build, flash and debug` 或运行 `MSPM0: Build and flash (XDS110)`。MSPM0G3507 最多支持 4 个硬件断点；逐过程调试时建议最多同时启用 3 个人工断点，给调试器留出临时断点资源。始终使用同一支探针。
 
 连接检查：`probe.ps1 -Action Check` 检查 XDS110；`-Action CheckWireless` 可检查无线 DAP。`-Action CheckXds110` 保留为 XDS110 检查的兼容写法。
 

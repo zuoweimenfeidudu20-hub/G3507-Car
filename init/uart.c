@@ -35,6 +35,16 @@ void motor_encoder_condition(void)
     UART_SendString(tx_buffer);
 }
 
+void motor_encoder_cnt(void)
+{
+    char tx_buffer[192]; 
+    // %d 代表十进制有符号整数
+    snprintf(tx_buffer, sizeof(tx_buffer), 
+            "%d,%d\r\n", 
+            right_encoder_count,left_encoder_count);
+    UART_SendString(tx_buffer);
+}
+
 static const char *pattern_name(trackpattern pattern)
 {
     switch(pattern){

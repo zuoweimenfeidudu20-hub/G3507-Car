@@ -75,4 +75,5 @@ graph TD
 
 - `scripts/probe.ps1 -Action Flash` 使用 `openocd/xds110-mspm0g3507.cfg`，通过 XDS110 写入 `build/init.out`，完成校验后复位。
 - 默认的 `-Action Check` 检查 XDS110；`-Action CheckWireless` 可检查无线 DAP，`-Action CheckXds110` 为兼容写法。
-- VS Code 的 XDS110 OpenOCD 配置使用 `request: launch`，先运行构建任务，再烧录 `build/init.out` 并进入调试。
+- VS Code 的 `XDS110 attach (no flash)` 配置使用 `request: attach`，只连接并暂停当前固件，不运行构建任务，也不下载固件；`build/init.out` 必须与芯片上的固件版本一致。
+- `XDS110 build, flash and debug` 配置使用 `request: launch`，先运行构建任务，再烧录 `build/init.out` 并进入调试。两个配置都不额外设置 `main` 临时断点，以免占用有限的硬件断点资源。
