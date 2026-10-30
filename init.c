@@ -61,8 +61,8 @@ int main(void)
         keymode current_mode = key_getmode();
         if (current_mode != last_mode)
         {
-            track_normal_reset();
-            condition_rst2(state2_line);
+            track_normal_rst();
+            track_abnormal_rst();
             set_target(0, 0);
             last_mode = current_mode;
         }

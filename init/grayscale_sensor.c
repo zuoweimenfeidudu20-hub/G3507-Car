@@ -24,6 +24,11 @@ static volatile int current_error=0;
 static volatile int current_values[gray_sensor];
 static volatile bool sample_ready=false;
 
+//黑白变化滤波
+static bool center_black=false;
+static int center_white_cnt=0;//黑变白计数
+
+
 //先调ki,后调kp,kd
 track_pid control={
     .kp=2,
@@ -432,39 +437,59 @@ void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_se
     
     switch(current_state2){
         case state2_line:
-            if(track_confirm(pattern==pattern_rightbranch,3)){
-                condition_rst2(cross_stage2==0 ? state2 : state1_c_lockstraight2);
-                send_newtarget(base_pwm2,0);
-            }else{
+            bool enter_condition1=(cross_stage2==0)&&(pattern==pattern_rightbranch);
+            if(track_confirm(enter_condition1==1,3)){
+                condition_rst2(state2_c_lockright);
+                send_newtarget(base_pwm2,5);
+            }
+            else{
                 send_newtarget(base_pwm2,line_pid(&control,error));
             }
-        break;
+        break; 
 
         case state2_c_lockright:
-            set_target(base_pwm2,5);
+            send_newtarget(base_pwm2,5);
             if(track_confirm(maxleft==1,3)){
-                condition_rst2(state2_line);
+                condition_rst2(state2_stair1);
+                cross_stage2=1;
             }
         break;
 
         case state2_stair1:
-            set_target(base_pwm2,line_pid(&control2,error));
-            if(track_confirm(center_bianhua(sensors)==1,4)){
+            if(cross_stage2!=1){
+                condition_rst2(state2_fault);
+                send_newtarget(0,0);
+                break;
+            }
+
+            send_newtarget(base_pwm2,line_pid(&control2,error));
+
+            if(center_white_confirm(sensors,4)){
                 condition_rst2(state2_teshu_lockleft1);
+                send_newtarget(base_pwm2,-5);
             }
         break;
 
         case state2_teshu_lockleft1:
-                if(track_confirm(maxright==1,3)){
                 set_target(base_pwm2,-5);
-                condition_rst2(state2_stair2);
+                if(track_confirm(maxright==1,3)){
+                    cross_stage2=2;
+                    condition_rst2(state2_stair2);
                 }
         break;
 
         case state2_stair2:
-                set_target(base_pwm2,line_pid(&control2,error));
-                if(track_confirm(pattern==pattern_leftbranch,3)){
-                    condition_rst2(state2_branch_lockleft2);
+            if(cross_stage2!=2){
+                    condition_rst2(state2_fault);
+                    send_newtarget(0,0);
+                    break;
+                }
+
+            send_newtarget(base_pwm2,line_pid(&control2,error));
+
+            if(center_white_confirm(sensors,4)){
+                condition_rst2(state2_branch_lockleft2);
+                send_newtarget(base_pwm2,-5);
                 }
         break;
 
@@ -478,14 +503,12 @@ void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_se
 
         case state2_stair3:
             set_target(base_pwm2,line_pid(&control2,error));
-            if(track_confirm(center_bianhua(sensors)==1,3)){
-                condition_rst2(state2_teshu_lockright2);
-            }
+            
         break;
 
         case state2_teshu_lockright2:
             set_target(base_pwm2,5);
-            if(track_confirm(center_bianhua(sensors)==1,3)){
+            if(track_confirm(maxleft==1,3)){
                 condition_rst2(state2_stair4);
             }
         break;
@@ -504,6 +527,36 @@ void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_se
     }
 }
 
+//tutor南样
+//
+void center_whiteblack_rst(void)
+{
+    center_black=false;
+    center_white_cnt=0;
+}
+
+//滤波
+void center_white_confirm(const int sensors[gray_sensor],int require)
+{
+    if(require<=0){
+        return false;
+    }
+    
+    bool center_black=sensors[3]&&sensors[4];
+    
+    if(center_black){
+        center_black=true;
+        center_white_cnt=0;
+        return false;
+    }
+    center_white_cnt++;
+    if(center_white_cnt>=require){
+        center_whiteblack_rst();
+        return true;
+    }
+    return false;
+}
+
 //两次状态确认进入某状态,滤波,require，（状况真假，审计n次）只返回1/0
 bool track_confirm(bool condition,int require)
 {
@@ -518,15 +571,6 @@ bool track_confirm(bool condition,int require)
     return current_cnt>=require;
 }
 
-//中间传感器黑变白
-bool center_bianhua(int sensors[gray_sensor])
-{
-    static bool shangci_init=true;//1为黑色
-    bool current_midium=sensors[3]||sensors[4];
-    bool change=shangci_init&&!current_midium;
-    shangci_init=current_midium;
-    return change;
-}
 
 //切换状态清0
 extern void condition_rst1(trackstate1 next)
@@ -544,8 +588,8 @@ extern void condition_rst2(trackstate2 next)
     state_ticks=0;
     current_cnt=0;
     event_condition=false;//?
-
-    trackpid_rst(&control,0);
+    center_whiteblack_rst();
+    trackpid_rst(&control2,0);
 }
 
 int line_pid(track_pid *pid,int error)
