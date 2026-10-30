@@ -10,6 +10,7 @@
 
 
 #define base_pwm 35
+#define base_pwm2 15
 #define track_scale 100
 
 
@@ -46,10 +47,12 @@ typedef enum
     state2_line,
     state2_c_lockright,//2:锁定右转
     state2_stair1,//1楼梯内部普通巡线
-    state2_teshu_lockleft1,//中间识别到白色，锁定左转直到最右边传感器识别到黑线
-    state2_branch_lockleft,//识别到左边黑色延申，锁定左转直到右边传感器识别到黑线
-    state2_stair2,//2楼梯线路过程中的普通循迹
+    state2_teshu_lockleft1,//第一次中间识别到白色，锁定左转直到最右边传感器识别到黑线
+    state2_stair2,//返回时普通循迹
+    state2_branch_lockleft2,//第二次识别到左边黑色延申，锁定左转直到右边传感器识别到黑线
+    state2_stair3,//2楼梯线路过程中的普通循迹
     state2_teshu_lockright2,//中间识别到白色，锁定右转
+    state2_stair4,//直到最后普通循迹（这里需要直角弯结合陀螺仪进行90°转弯）
     state2_stop,
     state2_fault,
 }trackstate2;
@@ -83,9 +86,12 @@ bool track_confirm(bool condition,int require);
 bool center_bianhua(int sensors[gray_sensor]);
 
 void trackcontroll(keymode mode,const grays *sample);
+void send_newtarget(int pwm,int correction);
 void track_run_normal(trackpattern pattern,int error);
-void track_normal_reset(void);
+void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_sensor]);
 
+void track_normal_rst(void);
+void track_abnormal_rst(void);
 bool gray_sample(grays *sample);
 #endif 
 

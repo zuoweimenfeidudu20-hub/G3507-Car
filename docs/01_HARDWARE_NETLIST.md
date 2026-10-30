@@ -29,14 +29,14 @@
 
 | 探头通道 | MCU 物理引脚 | 端口外设 | 算法位置权重 (weight) | 物理相对位置 |
 | :--- | :--- | :--- | :--- | :--- |
-| `GRAY1` | `PB15` | GPIOB Pin 15 | `-3500` | 最左翼探头 |
-| `GRAY2` | `PA13` | GPIOA Pin 13 | `-2500` | 左偏外探头 |
-| `GRAY3` | `PA14` | GPIOA Pin 14 | `-1500` | 左偏内探头 |
-| `GRAY4` | `PB17` | GPIOB Pin 17 | `-500` | 中心左侧探头 |
-| `GRAY5` | `PB18` | GPIOB Pin 18 | `+500` | 中心右侧探头 |
-| `GRAY6` | `PB19` | GPIOB Pin 19 | `+1500` | 右偏内探头 |
-| `GRAY7` | `PA21` | GPIOA Pin 21 | `+2500` | 右偏外探头 |
-| `GRAY8` | `PB21` | GPIOB Pin 21 | `+3500` | 最右翼探头 |
+| `GRAY1` | `PB11` | GPIOB Pin 11 | `-3500` | 最左翼探头 |
+| `GRAY2` | `PB14` | GPIOB Pin 14 | `-2500` | 左偏外探头 |
+| `GRAY3` | `PB10` | GPIOB Pin 10 | `-1500` | 左偏内探头 |
+| `GRAY4` | `PA7` | GPIOA Pin 7 | `-500` | 中心左侧探头 |
+| `GRAY5` | `PB17` | GPIOB Pin 17 | `+500` | 中心右侧探头 |
+| `GRAY6` | `PB18` | GPIOB Pin 18 | `+1500` | 右偏内探头 |
+| `GRAY7` | `PA14` | GPIOA Pin 14 | `+2500` | 右偏外探头 |
+| `GRAY8` | `PB24` | GPIOB Pin 24 | `+3500` | 最右翼探头 |
 
 ---
 
@@ -45,19 +45,19 @@
 | 键位标识 | MCU 物理引脚 | 端口外设 | 电气配置 | 映射工作模式 |
 | :--- | :--- | :--- | :--- | :--- |
 | `PIN_key1` | `PB23` | GPIOB Pin 23 | 内部上拉，低电平按下，5 ms 定时轮询 | `key1_putong` (普通循迹模式) |
-| `PIN_key2` | `PB8` | GPIOB Pin 8 | 内部上拉，低电平按下，5 ms 定时轮询 | `key2_teshu` (特殊赛道/台阶模式) |
-| `PIN_key3` | `PB3` | GPIOB Pin 3 | 内部上拉，低电平按下，5 ms 定时轮询 | `key3_baidong` (摆动循线模式) |
-| `PIN_key4` | `PB13` | GPIOB Pin 13 | 内部上拉，低电平按下，5 ms 定时轮询 | `key_idle` (急停/待机模式) |
+| `PIN_key2` | `PB27` | GPIOB Pin 27 | 内部上拉，低电平按下，5 ms 定时轮询 | `key2_teshu` (特殊赛道/台阶模式) |
+| `PIN_key3` | `PB6` | GPIOB Pin 6 | 内部上拉，低电平按下，5 ms 定时轮询 | `key3_baidong` (摆动循线模式) |
+| `PIN_key4` | `PB7` | GPIOB Pin 7 | 内部上拉，低电平按下，5 ms 定时轮询 | `key4_idle` (急停/待机模式) |
 
 ---
 
 ## 4. 辅助传感器与通信网表 (Sensors & Interfaces)
 
 ### 4.1 HC-SR04 超声波测距
-当前 `init.syscfg` 已删除 HC-SR04 的 GPIO 和定时器配置。原 `TRIG` (`PB14`)、`ECHO` (`PA1`) 与 `TIMG6` (`hcsr04_timer`) 均未分配给超声波；固件不配置 ECHO 边沿中断，也不执行周期测距。`hcsr04.c/.h` 仅保留为后续开发源码。
+当前 `init.syscfg` 已删除 HC-SR04 的 GPIO 和定时器配置。原 `TRIG` 引脚 `PB14` 现用于 `GRAY2`；原 `ECHO` 引脚 `PA1` 和 `TIMG6` (`hcsr04_timer`) 仍未分配给超声波。固件不配置 ECHO 边沿中断，也不执行周期测距。`hcsr04.c/.h` 仅保留为后续开发源码。
 
 ### 4.2 JY901P 航姿参考系统 (IMU)
-- **`UART1_RX`**：`PA18`，接模块 TX，9600 bps，8N1，中断接收姿态角数据包。
+- **`UART1_RX`**：`PB5`，接模块 TX，9600 bps，8N1，中断接收姿态角数据包。
 - **`UART1_TX`**：`PA8`，接模块 RX。
 
 ### 4.3 调试串口 (Debug Telemetry)
@@ -68,6 +68,7 @@
 - **0.96寸 OLED**：`I2C0` (SDA: `PA28`, SCL: `PA31`), 100 kHz 速率。
 - **舵机 PWM**：`TIMA0` (CH0: `PA0`, CH1: `PB20`), 50Hz 周期 (20ms)。
 - **火焰传感器 ADC**：`ADC0` 5通道序列转换 (`PA27, PA26, PA25, PA24, PB25`)。
+- **当前未分配**：`PA21`、`PA23`、`PA2`、`PA18` 均未在 `init.syscfg` 中分配；这里只说明固件配置，不代表板上没有物理连线。
 
 ---
 

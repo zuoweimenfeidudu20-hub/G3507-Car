@@ -4,8 +4,8 @@
 #include "stdio.h"
 #include "stdint.h"
 
-volatile extern int32_t right_encoder_count = 0;
-volatile extern int32_t left_encoder_count = 0;
+volatile int32_t right_encoder_count = 0;
+volatile int32_t left_encoder_count = 0;
 volatile int right_error_count = 0;
 volatile int left_error_count = 0;
 volatile int right_count_10ms = 0;

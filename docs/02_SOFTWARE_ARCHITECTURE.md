@@ -61,7 +61,7 @@ graph TD
   - 周期：严格 10ms。
   - 任务：禁止编码器中断进行快照读取，将 10ms 计数值与目标速度通过 PID 计算后，即刻输出新的左右轮 PWM 占空比。
 - **5ms 定时器中断 (`key_timer_INST_IRQHandler` on `TIMG7`)**：
-  - 周期：5 ms，每次调用 `key_tick1ms()`（保留原函数名）；消抖阈值为 6 次，按 30 ms 配置确认按下和松开。
+  - 周期：5 ms，每次调用 `key_tick5ms()`；消抖阈值为 6 次，按 30 ms 配置确认按下和松开。
   - 任务：按键消抖状态机更新并发布运行模式。
 - **10ms 定时器中断 (`track_timer_INST_IRQHandler` on `TIMG8`)**：
   - 任务：按从左到右的 GRAY1～GRAY8 顺序读取 8 路灰度，计算线位置和路况；将归一化读数（黑线为 1）、`pattern` 和 `error` 作为同一次采样发布。
@@ -69,7 +69,7 @@ graph TD
 ### 2.2 后台任务 (主循环轮询 Background Loop in `init.c`)
 1. 上电先将左右轮目标置零；主循环读取 `key_getmode()`，模式变化时复位循迹状态并立即将目标置零；
 2. `gray_sample()` 收到新采样后调用 `trackcontroll()`；按键 1 执行 `track_run_normal()`，根据灰度偏差纠偏，并在右分岔确认后进入直行锁定；按键 4 回到待机且目标为零；
-3. 每次处理灰度样本后调用 `motor_rlencoder_cnts(&sample, current_mode)`，打印从左到右的 8 路灰度读数、识别出的 `pattern` 名称、当前运行状态名称、消抖后识别出的按键模式（`key=key1_putong` 等）和左右电机 PID 下发的 PWM 值，最多约每 10 ms 一次。串口发送位于主循环，发送等待已设置上限。若主循环处理不及，单槽样本会被下一次采样覆盖。
+3. 每处理 5 个灰度样本调用一次 `motor_rlencoder_cnts(&sample, current_mode)`，打印从左到右的 8 路灰度读数、`pattern`、运行状态、按键模式和双轮 PWM，约每 50 ms 一次；循迹控制仍每 10 ms 运行。启动时打印复位原因，按键 4 确认时单独打印事件。串口发送位于主循环，发送等待已设置上限。若主循环处理不及，单槽样本会被下一次采样覆盖。
 
 ### 2.3 烧录与调试工具
 

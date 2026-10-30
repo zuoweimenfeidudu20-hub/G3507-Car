@@ -66,8 +66,9 @@
 
 | 函数声明 | 作用描述 |
 | :--- | :--- |
-| `void key_tick1ms(void)` | 1ms 定时器中断驱动式消抖处理，连续 30 次相同电平确认状态 |
-| `keymode key_getmode(void)` | 获取当前选定的运行模式枚举 (`key1_putong`, `key2_teshu`, `key3_baidong`, `key_idle`) |
+| `void key_tick5ms(void)` | 5 ms 定时器中断驱动式消抖处理，连续 6 次低电平确认按下 |
+| `keymode key_getmode(void)` | 获取当前选定的运行模式枚举 (`key1_putong`, `key2_teshu`, `key3_baidong`, `key4_idle`) |
+| `uint32_t key_get_key4_confirm_count(void)` | 获取本次启动以来按键 4 经消抖确认的次数；由中断更新，供主循环输出诊断事件 |
 
 ---
 

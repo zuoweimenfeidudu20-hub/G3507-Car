@@ -34,6 +34,7 @@ typedef struct
 
 static keycontrol keys[4];//4个按键各自保存一个状态
 volatile keymode mode=key4_idle;
+static volatile uint32_t key4_confirm_count=0;
 
 //1松开，0按下
 int Key_ReadPress(keyid id)
@@ -52,7 +53,9 @@ void key_selectmode(keyid id)
         case id1:mode=key1_putong; break;
         case id2:mode=key2_teshu;  break;
         case id3:mode=key3_baidong; break;
-        case id4:mode=key4_idle;
+        case id4:
+            key4_confirm_count++;
+            mode=key4_idle;
             set_target(0, 0);
             break;
         default: break;
@@ -114,6 +117,11 @@ void key_tick5ms(void)
 keymode key_getmode(void)
 {
     return mode;
+}
+
+uint32_t key_get_key4_confirm_count(void)
+{
+    return key4_confirm_count;
 }
 
 void key_timer_INST_IRQHandler()

@@ -18,10 +18,22 @@
 
 ### ⚠️ BUG-00A: 串口遥测可能阻塞主循环（已加等待上限，待实机验证）
 
-- 主循环内的 `motor_rlencoder_cnts()` 调用 `UART_SendString()`；原实现逐字节调用会无限等待的 `DL_UART_Main_transmitDataBlocking()`。当前最多每次 10 ms 灰度采样都发送一次。
+- 主循环内的 `motor_rlencoder_cnts()` 调用 `UART_SendString()`；原实现逐字节调用会无限等待的 `DL_UART_Main_transmitDataBlocking()`。当前循迹仍每 10 ms 控制一次，但遥测改为每 5 个样本发送一次（约 20 Hz），避免长报文在 115200 bps 下占满带宽并出现截图中的断裂/粘连行。
 - 若 UART 发送器停止出队，主循环会停在串口发送，无法读取新的按键模式；现改为每字节有限次尝试，超限即放弃本次报文，并累加 `uart_tx_timeout_count` 供调试器查看。
 - 串口停止与按键失效同时发生，但尚未确认 UART 是否为实际停机点；还需在失效时读取 CPU 状态和计数器。
 - 按键 4 的停车目标现在直接由消抖完成的按键中断下发，不再依赖主循环先从 UART 调用返回；若中断本身停摆，此保护也无法生效。
+
+### ⚠️ BUG-00B: 循迹中突然回到按键 4 待机（已确认芯片复位，供电/NRST 根因待查）
+
+以下 2026-10-30 历史日志使用旧引脚分配，K4 当时为 `PB13`；当前引脚分配已改为 `PB7`。
+
+- 2026-10-30 串口截图显示 `key1_putong/state1_c_lockstraight1` 后出现 `key4_idle/state=inactive`。循迹子状态机不会写入按键模式；在当前正常代码路径中，运行时切到 K4 来自 PB13 连续约 30 ms 被读为低电平，另一种可能是 MCU 重启后 `mode` 回到上电默认的 `key4_idle`。现有截图无法区分这两种原因。
+- 现加 `event=boot,reset=...,reason=...` 启动标记及 `event=key4_confirmed,count=...` 消抖确认标记。若现象前后出现新的 `event=boot`，按 `reason` 排查供电跌落、复位脚或其他重启原因；若出现 `event=key4_confirmed` 而没有新启动标记，检查 PB13（K4）实际电平、接线、内部上拉及电机工作时的干扰。`reason=bor_supply` 表示芯片检测到供电欠压复位。暂不盲目延长 K4 消抖，以免拖慢急停响应。
+- 主循环也在循迹计算后复查按键模式；若 K4 在本轮模式快照之后被确认，立即再次将双轮目标清零。
+- 后续实机日志已在 `key1_putong/state1_c_lockstraight1` 后捕获多次 `event=boot,reset=0x04,reason=bor_supply`，没有 `event=key4_confirmed`；一次 `event=boot,reset=0x15,reason=cpu_lockup` 也夹在反复欠压复位中。因此本次回到 K4 是芯片重启后回到默认模式，并非寻迹状态机或 K4 误触发。`0x04` 是 MCU 的 BOR 供电欠压复位，`0x15` 是 CPU lockup 复位；后者是否由供电扰动连带造成，尚不能单凭日志确定。
+- 先用示波器在 MCU 供电脚相对 MCU 地脚测 3.3 V，尤其观察电机启动、左右轮 PWM 变化和右岔道附近的瞬时跌落；再在电机不驱动时复现，区分电机负载与控制板/传感器供电问题。检查电源/稳压器容量、线束和地线接触、MCU 近端去耦、电机驱动供电，以及曾发生过短路的灰度板/排线。若供电稳定后仍出现 `cpu_lockup`，再单独排查软件或中断。
+- 再次实机日志先出现 `event=boot,reset=0x04,reason=bor_supply`，随后出现 `event=boot,reset=0x0c,reason=nrst_pin`。本机 SDK 定义 `0x0c` 为 NRST 低脉冲（短于 1 秒）引发的 BOOTRST；与 K4/PB13 无关。`gray=00000000,pattern_lost` 只表示当时 8 路灰度输入全低，不能单独证明灰度板失电。
+- 下一步同时用示波器测 MCU 的 VDD–VSS 和 NRST–VSS，并以 NRST 下降沿触发：VDD 先跌时查电源、地线、电机负载；VDD 稳定而 NRST 单独出现低脉冲时查复位按钮、XDS110/调试接线、复位线上拉与抗干扰电容。两路同时变化时依波形先后判断，不能凭两个复位码断言有两个独立硬件故障。[TI MSPM0 G 系列硬件指南](https://www.ti.com/lit/an/slaae76e/slaae76e.pdf)指出 NRST 没有内部上拉，需外部电路拉高。
 
 ### ✅ BUG-01: 未完成的 ECHO 中断与编码器共用 GPIOA（已停用超声波配置）
 - **处理记录**：`init.syscfg` 已删除超声波 GPIO 配置（原 `ECHO PA1`、`TRIG PB14`）和 `TIMG6` 周期定时器配置。`pid_motor.c` 的 `GROUP1_IRQHandler` 不再调用 `HCSR04_HandleEchoInterrupt()`，只处理当前配置的编码器引脚。

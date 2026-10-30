@@ -4,15 +4,20 @@
 #include "motor.h"
 #include "key.h"
 
+#define lost_stopticks 300
 
 int state_ticks=0;
 int current_cnt=0;
 bool event_condition=false;
-// static volatile int lost_ticks=0;
-// static volatile int recover_ticks=0;
+static volatile int lost_ticks=0;
+static volatile int recover_ticks=0;
+static volatile bool lost_active=false;
+static volatile bool lost_stop=false;
+volatile int last_pwm=0;
+volatile int last_correction=0;
 
 static uint8_t cross_stage1=0;
-//static uint8_t cross_stage2=0;
+static uint8_t cross_stage2=0;//特殊循迹过程使用
 
 static volatile trackpattern current_pattern=pattern_line;
 static volatile int current_error=0;
@@ -21,7 +26,7 @@ static volatile bool sample_ready=false;
 
 //先调ki,后调kp,kd
 track_pid control={
-    .kp=10,
+    .kp=2,
     .ki=0,
     .kd=0,
 
@@ -29,7 +34,19 @@ track_pid control={
     .previous_error=0,
 
     .track_int_limit=500,//积分限幅
-    .output_limit=15//输出限幅
+    .output_limit=25//输出限幅
+};
+
+track_pid control2={
+    .kp=0,
+    .ki=0,
+    .kd=0,
+
+    .integral=0,
+    .previous_error=0,
+
+    .track_int_limit=500,
+    .output_limit=10//输出限幅,
 };
 
 typedef struct {
@@ -301,8 +318,7 @@ void trackcontroll(keymode mode,const grays *sample)
         break;
 
         case key2_teshu:
-            //track_run_abnormal(sample->pattern,sample->error);
-            set_target(0,0);
+            track_run_abnormal(sample->pattern,sample->error,sample->values);
         break;
 
         case key3_baidong:
@@ -324,17 +340,51 @@ void trackcontroll(keymode mode,const grays *sample)
 
 
 trackstate1 current_state1=state1_line;//已经通过函数传递error,pattern
-void track_normal_reset(void)
+void track_normal_rst(void)
 {
     cross_stage1=0;
+    lost_ticks=0;
+    recover_ticks=0;
+    lost_active=false;
+    lost_stop=false;
     condition_rst1(state1_line);
+}
+
+void track_abnormal_rst(void)
+{
+
+
+
+
+    condition_rst2(state2_line);
+}
+
+void send_newtarget(int pwm,int correction)
+{
+    set_target(pwm,correction);
+    if(!lost_stop){
+        last_pwm=pwm;
+        last_correction=correction;
+    }
 }
 
 void track_run_normal(trackpattern pattern,int error)
 {
-    if(pattern==pattern_lost){
-        track_confirm(false,3);
+    if(lost_stop){
+        if(current_state1!=state1_stop){
+            condition_rst1(state1_stop);
+        }
         set_target(0,0);
+        return;
+    }
+    if(current_state1==state1_stop||current_state1==state1_fault){
+        set_target(0,0);
+        return;
+    }
+    if(lost_active||pattern==pattern_lost){
+        track_confirm(false,3);//current_cnt清0
+         
+        set_target(last_pwm,last_correction);
         return;
     }
 
@@ -342,14 +392,14 @@ void track_run_normal(trackpattern pattern,int error)
         case state1_line:
             if(track_confirm(pattern==pattern_rightbranch,3)){
                 condition_rst1(cross_stage1==0 ? state1_c_lockstraight1 : state1_c_lockstraight2);
-                set_target(base_pwm,0);
+                send_newtarget(base_pwm,0);
             }else{
-                set_target(base_pwm,line_pid(&control,error));
+                send_newtarget(base_pwm,line_pid(&control,error));
             }
         break;
         //继续灰度传感器识别，直到
         case state1_c_lockstraight1:
-            set_target(base_pwm,0);
+            send_newtarget(base_pwm,0);
             if(track_confirm(pattern==pattern_line,3)){
                 cross_stage1=1;
                 condition_rst1(state1_line);
@@ -357,7 +407,7 @@ void track_run_normal(trackpattern pattern,int error)
         break;
 
         case state1_c_lockstraight2:
-            set_target(base_pwm,0);
+            send_newtarget(base_pwm,0);
             if(track_confirm(pattern==pattern_line,3)){
                 cross_stage1=0;
                 condition_rst1(state1_line);
@@ -365,22 +415,94 @@ void track_run_normal(trackpattern pattern,int error)
         break;
 
         case state1_stop:
-            set_target(0,0);
+            send_newtarget(0,0);
         break;
 
         case state1_fault:
-            set_target(0,0);
+            send_newtarget(0,0);
         break;
     }
 }
 
 trackstate2 current_state2=state2_line;
-// void track_run_abnormal(trackpattern pattern,int error)
-// {
-//     switch(current_state2){
-//         case
-//     }
-// }
+void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_sensor])
+{
+    bool maxleft=sensors[0]||sensors[1];//最左边两个任一
+    bool maxright=sensors[6]||sensors[7];//同
+    
+    switch(current_state2){
+        case state2_line:
+            if(track_confirm(pattern==pattern_rightbranch,3)){
+                condition_rst2(cross_stage2==0 ? state2 : state1_c_lockstraight2);
+                send_newtarget(base_pwm2,0);
+            }else{
+                send_newtarget(base_pwm2,line_pid(&control,error));
+            }
+        break;
+
+        case state2_c_lockright:
+            set_target(base_pwm2,5);
+            if(track_confirm(maxleft==1,3)){
+                condition_rst2(state2_line);
+            }
+        break;
+
+        case state2_stair1:
+            set_target(base_pwm2,line_pid(&control2,error));
+            if(track_confirm(center_bianhua(sensors)==1,4)){
+                condition_rst2(state2_teshu_lockleft1);
+            }
+        break;
+
+        case state2_teshu_lockleft1:
+                if(track_confirm(maxright==1,3)){
+                set_target(base_pwm2,-5);
+                condition_rst2(state2_stair2);
+                }
+        break;
+
+        case state2_stair2:
+                set_target(base_pwm2,line_pid(&control2,error));
+                if(track_confirm(pattern==pattern_leftbranch,3)){
+                    condition_rst2(state2_branch_lockleft2);
+                }
+        break;
+
+        case state2_branch_lockleft2:
+            if(track_confirm(pattern==pattern_leftbranch,3))
+                set_target(base_pwm2,-5);
+                if(track_confirm(maxright==1,3)){
+                    condition_rst2(state2_stair3);
+                }
+        break;
+
+        case state2_stair3:
+            set_target(base_pwm2,line_pid(&control2,error));
+            if(track_confirm(center_bianhua(sensors)==1,3)){
+                condition_rst2(state2_teshu_lockright2);
+            }
+        break;
+
+        case state2_teshu_lockright2:
+            set_target(base_pwm2,5);
+            if(track_confirm(center_bianhua(sensors)==1,3)){
+                condition_rst2(state2_stair4);
+            }
+        break;
+
+        case state2_stair4:
+            set_target(base_pwm2,error);
+        break;
+
+        case state2_stop:
+            send_newtarget(0,0);
+        break;
+
+        case state2_fault:
+            send_newtarget(0,0);
+        break;
+    }
+}
 
 //两次状态确认进入某状态,滤波,require，（状况真假，审计n次）只返回1/0
 bool track_confirm(bool condition,int require)
@@ -450,7 +572,7 @@ void trackpid_rst(track_pid *pid,int error)
     pid->previous_error=error;
 }
 
-//目标pwm设置,普通前进状态
+//目标pwm设置,普通前进状态//左转-，右转+
 void set_target(int pwm,int correction)
 {
     int left_target=pwm+correction;
@@ -479,13 +601,38 @@ void track_timer_INST_IRQHandler(void)
 
     sensor_read(values);
     trackpattern pattern=track_analyze(values, &error);
-    // 发布本次采样；不在中断里执行避障、PID状态机或串口打印
+    if(key_getmode()==key1_putong&&pattern_lost&&lost_ticks<=lost_stopticks){
+        if(pattern==pattern_lost){
+            lost_active=true;
+            recover_ticks=0;
+        }else if(lost_active){
+            if(++recover_ticks>=3){
+                lost_active=false;
+                recover_ticks=0;
+                lost_ticks=0;
+            }//滤波，丢线处理中，如果连续识别都循迹成功退出
+        }
+    }
+    ///找线3次确认期间仍计入丢线时间
+    if(lost_active){
+        if(lost_ticks<lost_stopticks){
+            lost_ticks++;
+        }
+        if(lost_ticks>=lost_stopticks){
+            lost_stop=true;
+            set_target(0,0);
+        }
+    }
+   
+    //发布本次采样；不在中断里执行避障、PID状态机或串口打印
     current_pattern=pattern;
     current_error=error;
     for(int i=0;i<gray_sensor;i++){
         current_values[i]=values[i];
     }
     sample_ready=true;
+
+
 }
 
 bool gray_sample(grays *sample)
