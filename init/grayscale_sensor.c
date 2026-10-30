@@ -490,16 +490,21 @@ void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_se
             if(center_white_confirm(sensors,4)){
                 condition_rst2(state2_branch_lockleft2);
                 send_newtarget(base_pwm2,-5);
+                cross_stage2=3;
                 }
         break;
 
         case state2_branch_lockleft2:
-            if(track_confirm(pattern==pattern_leftbranch,3))
-                set_target(base_pwm2,-5);
-                if(track_confirm(maxright==1,3)){
-                    condition_rst2(state2_stair3);
-                }
+            if(cross_stage2!=3){
+                condition_rst2(state2_fault);
+                send_newtarget(0,0);
+            }
+
+            send_newtarget(base_pwm2,-5);
+            
+            
         break;
+
 
         case state2_stair3:
             set_target(base_pwm2,line_pid(&control2,error));
