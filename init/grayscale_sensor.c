@@ -479,39 +479,48 @@ void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_se
         break;
 
         case state2_stair2:
+        bool event_condition2=(cross_stage2==3)&&(pattern==pattern_leftbranch);
             if(cross_stage2!=2){
                     condition_rst2(state2_fault);
                     send_newtarget(0,0);
                     break;
                 }
-
-            send_newtarget(base_pwm2,line_pid(&control2,error));
-
-            if(center_white_confirm(sensors,4)){
+            if(track_confirm(event_condition2,3)){
+                cross_stage2=3;
                 condition_rst2(state2_branch_lockleft2);
                 send_newtarget(base_pwm2,-5);
-                cross_stage2=3;
-                }
+            }else{
+                send_newtarget(base_pwm2,line_pid(&control2,error));
+            }         
         break;
 
         case state2_branch_lockleft2:
             if(cross_stage2!=3){
                 condition_rst2(state2_fault);
                 send_newtarget(0,0);
+                break;
             }
-
             send_newtarget(base_pwm2,-5);
-            
-            
+            if(track_confirm(maxright==1,3)){
+                condition_rst2(state2_stair3);
+            }
         break;
-
 
         case state2_stair3:
             set_target(base_pwm2,line_pid(&control2,error));
-            
+            if(center_white_confirm(sensors,4)){
+                cross_stage2=4;
+                condition_rst2(state2_teshu_lockright2);
+                send_newtarget(base_pwm2,5);
+            }
         break;
 
         case state2_teshu_lockright2:
+            if(cross_stage2!=4){
+                condition_rst2(state2_fault);
+                send_newtarget(0,0);
+                break;
+            }
             set_target(base_pwm2,5);
             if(track_confirm(maxleft==1,3)){
                 condition_rst2(state2_stair4);
