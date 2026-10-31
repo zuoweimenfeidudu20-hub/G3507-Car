@@ -4,20 +4,25 @@
 #include "motor.h"
 #include "key.h"
 
-#define lost_stopticks 300
+#define lost_stopticks 300//状态1丢线处理
+#define lost_stopticks2 300
+
 
 int state_ticks=0;
 int current_cnt=0;
-bool event_condition=false;
+bool event_condition=false;//
 static volatile int lost_ticks=0;
 static volatile int recover_ticks=0;
 static volatile bool lost_active=false;
 static volatile bool lost_stop=false;
+
+static int state2_lost_cnt=0;
+
 volatile int last_pwm=0;
 volatile int last_correction=0;
 
 static uint8_t cross_stage1=0;
-static uint8_t cross_stage2=0;//特殊循迹过程使用
+static uint8_t cross_stage2=1;//特殊循迹过程使用
 
 static volatile trackpattern current_pattern=pattern_line;
 static volatile int current_error=0;
@@ -357,10 +362,8 @@ void track_normal_rst(void)
 
 void track_abnormal_rst(void)
 {
-
-
-
-
+    cross_stage2=1;
+    state2_lost_cnt=0;
     condition_rst2(state2_line);
 }
 
@@ -435,6 +438,47 @@ void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_se
     bool maxleft=sensors[0]||sensors[1];//最左边两个任一
     bool maxright=sensors[6]||sensors[7];//同
     
+    //丢线逻辑
+    if(current_state2==state2_stop||current_state2==state2_fault){
+        send_newtarget(0,0);
+        return;
+    }
+
+    bool lost_check=current_state2==state2_line||current_state2==state2_stair1||current_state2==state2_stair3||current_state2==state2_teshu_lockright2||current_state2==state2_stair4;
+
+    if(lost_check){
+        if(pattern==pattern_lost){
+            if(state2_lost_cnt<lost_stopticks2){
+                state2_lost_cnt++;
+            }else{
+                state2_lost_cnt=0;
+            }
+        }
+        if(state2_lost_cnt>=lost_stopticks2){
+            condition_rst2(state2_fault);
+            set_target(0,0);
+            return;
+        }
+    }else{
+        state2_lost_cnt=0;
+    }
+
+
+    if(pattern==pattern_lost){
+        if(state2_lost_cnt<lost_stopticks2){
+            state2_lost_cnt++;
+        }else{
+            state2_lost_cnt=0;
+        }
+    }
+    if(state2_lost_cnt>=lost_stopticks2){
+        condition_rst2(state2_fault);
+        set_target(0,0);
+        return;
+    }
+
+
+
     switch(current_state2){
         case state2_line:
             bool enter_condition1=(cross_stage2==1)&&(pattern==pattern_rightbranch);
@@ -501,14 +545,21 @@ void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_se
             }
             send_newtarget(base_pwm2,-5);
             if(track_confirm(maxright==1,3)){
+                cross_stage2=4;
                 condition_rst2(state2_stair3);
             }
         break;
 
         case state2_stair3:
-            set_target(base_pwm2,line_pid(&control2,error));
+            if(cross_stage2!=4){
+                condition_rst2(state2_fault);
+                send_newtarget(0,0);
+                break;
+            }
+
+            send_newtarget(base_pwm2,line_pid(&control2,error));
+
             if(center_white_confirm(sensors,4)){
-                cross_stage2=4;
                 condition_rst2(state2_teshu_lockright2);
                 send_newtarget(base_pwm2,5);
             }
@@ -522,12 +573,18 @@ void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_se
             }
             set_target(base_pwm2,5);
             if(track_confirm(maxleft==1,3)){
+                cross_stage2=5;
                 condition_rst2(state2_stair4);
             }
         break;
 
         case state2_stair4:
-            set_target(base_pwm2,line_pid(&control2,error));
+        if(cross_stage2!=5){
+            condition_rst2(state2_fault);
+            send_newtarget(0,0);
+            break;
+        }
+        send_newtarget(base_pwm2,line_pid(&control2,error));
         break;
 
         case state2_stop:
@@ -598,7 +655,6 @@ extern void condition_rst1(trackstate1 next)
     state_ticks=0;
     current_cnt=0;
     event_condition=false;
-
     trackpid_rst(&control,0);
 }
 extern void condition_rst2(trackstate2 next)
@@ -608,8 +664,6 @@ extern void condition_rst2(trackstate2 next)
     current_cnt=0;
     event_condition=false;//
     center_whiteblack_rst();
-    cross_stage2=1;
-    condition_rst2(state2_line);
     trackpid_rst(&control2,0);
 }
 
