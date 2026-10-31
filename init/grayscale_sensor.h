@@ -90,7 +90,7 @@ void send_newtarget(int pwm,int correction);
 void track_run_normal(trackpattern pattern,int error);
 void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_sensor]);
 
-void center_white_confirm(const int sensors[gray_sensor],int require);
+bool center_white_confirm(const int sensors[gray_sensor],int require);
 void center_whiteblack_rst(void);
 
 void track_normal_rst(void);

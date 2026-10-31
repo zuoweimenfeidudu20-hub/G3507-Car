@@ -547,6 +547,8 @@ void center_whiteblack_rst(void)
 {
     center_black=false;
     center_white_cnt=0;
+    cross_stage2=1;
+    condition_rst2(state2_line);
 }
 
 //滤波
@@ -556,14 +558,20 @@ bool center_white_confirm(const int sensors[gray_sensor],int require)
         return false;
     }
     
-    bool center_has_black=sensors[3]&&sensors[4];
+    bool center_has_black=sensors[3]&&sensors[4];//识别黑线
     
-    if(center_black){
+    if(center_has_black){
         center_black=true;
         center_white_cnt=0;
-        return false;
+        return false;//仍然为黑线状态
+    }//
+
+    if(!center_black){
+        return false;//之前未见到黑线不允许计数
     }
+
     center_white_cnt++;
+    
     if(center_white_cnt>=require){
         center_whiteblack_rst();
         return true;
@@ -601,8 +609,7 @@ extern void condition_rst2(trackstate2 next)
     current_state2=next;
     state_ticks=0;
     current_cnt=0;
-    event_condition=false;//?
-    cross_stage2=0;
+    event_condition=false;//
     center_whiteblack_rst();
     trackpid_rst(&control2,0);
 }

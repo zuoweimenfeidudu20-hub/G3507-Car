@@ -87,7 +87,7 @@ static const char *current_state_name(keymode mode)
             case state2_c_lockright: return "state2_c_lockright";
             case state2_stair1: return "state2_stair1";
             case state2_teshu_lockleft1: return "state2_teshu_lockleft1";
-            case state2_branch_lockleft: return "state2_branch_lockleft";
+            case state2_branch_lockleft2: return "state2_branch_lockleft";
             case state2_stair2: return "state2_stair2";
             case state2_teshu_lockright2: return "state2_teshu_lockright2";
             case state2_stop: return "state2_stop";
