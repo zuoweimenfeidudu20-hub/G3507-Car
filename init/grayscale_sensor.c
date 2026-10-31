@@ -479,7 +479,7 @@ void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_se
         break;
 
         case state2_stair2:
-        bool event_condition2=(cross_stage2==3)&&(pattern==pattern_leftbranch);
+        bool event_condition2=(cross_stage2==2)&&(pattern==pattern_leftbranch);
             if(cross_stage2!=2){
                     condition_rst2(state2_fault);
                     send_newtarget(0,0);
@@ -528,7 +528,7 @@ void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_se
         break;
 
         case state2_stair4:
-            set_target(base_pwm2,error);
+            set_target(base_pwm2,line_pid(&control2,error));
         break;
 
         case state2_stop:
@@ -550,13 +550,13 @@ void center_whiteblack_rst(void)
 }
 
 //滤波
-void center_white_confirm(const int sensors[gray_sensor],int require)
+bool center_white_confirm(const int sensors[gray_sensor],int require)
 {
     if(require<=0){
         return false;
     }
     
-    bool center_black=sensors[3]&&sensors[4];
+    bool center_has_black=sensors[3]&&sensors[4];
     
     if(center_black){
         center_black=true;
@@ -602,6 +602,7 @@ extern void condition_rst2(trackstate2 next)
     state_ticks=0;
     current_cnt=0;
     event_condition=false;//?
+    cross_stage2=0;
     center_whiteblack_rst();
     trackpid_rst(&control2,0);
 }
