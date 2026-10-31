@@ -48,7 +48,7 @@ track_pid control={
 };
 
 track_pid control2={
-    .kp=0,
+    .kp=2,
     .ki=0,
     .kd=0,
 
@@ -446,38 +446,17 @@ void track_run_abnormal(trackpattern pattern,int error,const int sensors[gray_se
 
     bool lost_check=current_state2==state2_line||current_state2==state2_stair1||current_state2==state2_stair3||current_state2==state2_teshu_lockright2||current_state2==state2_stair4;
 
-    if(lost_check){
-        if(pattern==pattern_lost){
-            if(state2_lost_cnt<lost_stopticks2){
-                state2_lost_cnt++;
-            }else{
-                state2_lost_cnt=0;
-            }
-        }
-        if(state2_lost_cnt>=lost_stopticks2){
-            condition_rst2(state2_fault);
-            set_target(0,0);
-            return;
-        }
-    }else{
+    if(!lost_check||pattern!=pattern_lost){
         state2_lost_cnt=0;
+    }else if(state2_lost_cnt<lost_stopticks2){
+        state2_lost_cnt++;
     }
 
-
-    if(pattern==pattern_lost){
-        if(state2_lost_cnt<lost_stopticks2){
-            state2_lost_cnt++;
-        }else{
-            state2_lost_cnt=0;
-        }
-    }
-    if(state2_lost_cnt>=lost_stopticks2){
+    if(lost_check&&state2_lost_cnt>=lost_stopticks2){
         condition_rst2(state2_fault);
         set_target(0,0);
         return;
     }
-
-
 
     switch(current_state2){
         case state2_line:
